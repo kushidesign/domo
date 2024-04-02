@@ -419,3 +419,8 @@
 
 (defn ^:public add-event-listener! [el nm f opts]
   (.addEventListener el (name nm) f opts))
+
+(defn ^:public prefers-reduced-motion? []
+  (let [mm (.matchMedia js/window "(prefers-reduced-motion: reduce)")]
+    (or (true? mm)
+        (.-matches mm))))
