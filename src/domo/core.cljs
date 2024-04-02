@@ -242,6 +242,12 @@
 (defn ^:public writing-direction []
   (.-direction (js/window.getComputedStyle js/document.documentElement)))
 
+(defn as-css-custom-property-name [v]
+  (when-let [nm* (some-> v as-str)]
+    (let [dollar-syntax? (and (keyword? v) (string/starts-with? nm* "$"))
+          nm* (if dollar-syntax? (subs nm* 1) nm*)]
+      (str (when-not (string/starts-with? nm* "--") "--") nm*))))
+
 (defn ^:public css-custom-property-value-data
   "Gets computed style for css custom property.
    First checks for the computed style on the element, if supplied.
