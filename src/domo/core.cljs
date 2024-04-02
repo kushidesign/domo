@@ -238,6 +238,7 @@
 
 (defn ^:public scroll-to-top! [] (js/window.scrollTo 0 0))
 
+;; Figure out best heuristic here .-dir vs .-direction vs `writing-mode`(css)
 (defn ^:public writing-direction []
   (.-direction (js/window.getComputedStyle js/document.documentElement)))
 
