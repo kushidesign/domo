@@ -3,6 +3,9 @@
    [clojure.string :as string]
    [applied-science.js-interop :as j]))
 
+(defn ^:public as-str [x]
+  (str (if (or (keyword? x) (symbol? x)) (name x) x)))
+
 (defn ^:public round-by-dpr [n]
   (let [dpr (or js/window.devicePixelRatio 1)
         ret (/ (js/Math.round (* dpr n)) dpr)]
