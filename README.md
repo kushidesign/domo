@@ -26,7 +26,7 @@ And many more - checkout source of `domo.core` namespace.
 Add as a dependency to your project:
 
 ```clojure
-[design.kushi/domo "0.1.0"]
+[design.kushi/domo "0.2.0"]
 ```
 <br>
 
