@@ -344,11 +344,10 @@
 
 (defn ^:public qs-data=
   ([attr v]
-   (qs-data= js/document attr (str v)))
+   (qs-data= js/document attr v))
   ([el attr v]
    (.querySelector el (data-selector= attr (str v)))))
 
-;; focus
 
 ;;macro?
 (defn ^:public focus! [el] (some-> el .focus))
