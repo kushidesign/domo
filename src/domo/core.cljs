@@ -199,8 +199,9 @@
 
 ;; figure out thing
 (defn observe-intersection
-  [{:keys [element intersecting not-intersecting f threshold]
-    :or {threshold 0.1}}]
+  [{:keys [element intersecting not-intersecting f threshold root-margin]
+    :or {threshold 0.1
+         root-margin 0}}]
   (when element
     (let [observer (js/IntersectionObserver.
                     (fn [^js entries]
@@ -208,7 +209,8 @@
                         (when intersecting (intersecting))
                         (when not-intersecting (not-intersecting)))
                       (when f (f)))
-                    #js {:threshold threshold})]
+                    #js {:threshold threshold
+                         :rootMargin root-margin})]
       (when observer
         (.observe observer element)))))
 
