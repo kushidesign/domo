@@ -1,5 +1,5 @@
 (ns domo.core
-  (:require
+  (:require 
    [clojure.string :as string]
    [applied-science.js-interop :as j]))
 
