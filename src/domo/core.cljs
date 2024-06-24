@@ -83,11 +83,6 @@
   (let [{:keys [x-fraction y-fraction]} (client-rect node)]
     (screen-quadrant* x-fraction y-fraction)))
 
-(defn ^:public toggle-boolean-attribute
-  [node attr]
-  (let [attr-val (.getAttribute node (name attr))
-        newv (if (= attr-val "false") true false)]
-    (.setAttribute node (name attr) newv)))
 
 (defn ^:public parent [node] (some-> node .-parentNode))
 (defn ^:public next-element-sibling [node] (some-> node .-nextElementSibling))
@@ -118,7 +113,7 @@
 
 (defn ^:public nearest-ancestor
   [node sel]
-  (.closest node sel))
+  (when sel (some-> node (.closest sel))))
 
 (defn ^:public toggle-class!
   [el & xs]
@@ -333,6 +328,7 @@
           (if (string? steps)
             (string/split steps #" ")
             steps)))
+
 
 ;; querySelector
 (defn ^:public data-selector= [attr v]
