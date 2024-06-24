@@ -430,3 +430,10 @@
   (let [mm (.matchMedia js/window "(prefers-reduced-motion: reduce)")]
     (or (true? mm)
         (.-matches mm))))
+
+(defn ^:public matches-media?
+  [prop val]
+  (when (and prop val)
+    (.-matches (js/window.matchMedia (str "(" (as-str prop) ": " (as-str val) ")")))))
+
+
