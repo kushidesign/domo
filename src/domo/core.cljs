@@ -354,6 +354,59 @@
    (.querySelector el (data-selector= attr (str v)))))
 
 
+;; toggling attributes
+(defn ^:public toggle-boolean-attribute
+  [node attr]
+  (let [attr-val (.getAttribute node (name attr))
+        newv (if (= attr-val "false") true false)]
+    (.setAttribute node (name attr) newv)))
+
+
+
+;; TODO - should this be children (plural) friendly?
+(defn- ^:public get-sibling-with-attribute
+  [el attr v]
+  (some-> el
+          (zip-get "^")
+          (qs (str "[" attr "=\"" v "\"]"))))
+
+
+
+;; TODO - should this just toggle with all the siblings? 
+(defn ^:public toggle-boolean-attribute-sibling
+  [el attr]
+  (when-not (some-> el (.getAttribute attr) (= "true"))
+    (some-> el
+            (get-sibling-with-attribute attr "true") 
+            (toggle-boolean-attribute attr))
+    (toggle-boolean-attribute el attr)))
+
+
+
+(defn ^:public toggle-attribute
+  [node attr a b]
+  (some-> node 
+          (.setAttribute (name attr) 
+                         (if (= (.getAttribute node (name attr))
+                                (str a))
+                           (str b)
+                           (str a)))))
+
+
+
+;; TODO - should this just toggle with all the siblings? 
+(defn ^:public toggle-attribute-sibling
+  [el attr a b]
+  (let [a (str a)
+        b (str b)]
+    (when-not (some-> el (.getAttribute attr) (= a))
+      (some-> el
+              (get-sibling-with-attribute attr a) 
+              (toggle-attribute attr a b))
+      (toggle-attribute el attr a b))))
+
+
+
 ;;macro?
 (defn ^:public focus! [el] (some-> el .focus))
 
