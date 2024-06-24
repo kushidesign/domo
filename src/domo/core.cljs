@@ -437,3 +437,32 @@
     (.-matches (js/window.matchMedia (str "(" (as-str prop) ": " (as-str val) ")")))))
 
 
+(defn mouse-down-a11y
+  "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
+   Intended for buttons, switches, checkboxes, radios, etc.
+
+   Contrived example with reagent:
+
+  (defn sidenav-item-handler [label modal? e]
+    (domo/scroll-into-view!
+    (domo/qs-data= \"foo-bar\" label))
+    (domo/scroll-by! {:y -50})
+    (when modal?
+      (dismiss-popover! e)))
+   
+  (defn my-reagent-component
+    [{:keys [coll modal?]}]
+    (into [:ul]
+          (for [{:keys [label]} coll]
+            [:li 
+            [button
+              (merge-attrs
+              (sx :.pill
+                  ...)
+              (mouse-down-a11y sidenav-item-handler label modal?))
+              label]])))"
+  [f & args]
+  {:on-key-down   #(when (contains? #{" " "Enter"} (.-key %))
+                     (apply f (concat args [%])))
+   :on-mouse-down #(when (= 0 (.-button %))
+                     (apply f (concat args [%])))})
