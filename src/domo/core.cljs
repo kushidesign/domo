@@ -1,7 +1,6 @@
 (ns domo.core
-  (:require 
-   [clojure.string :as string]
-   [applied-science.js-interop :as j]))
+  (:require [applied-science.js-interop :as j]
+            [clojure.string :as string]))
 
 (defn ^:public as-str [x]
   (str (if (or (keyword? x) (symbol? x)) (name x) x)))
@@ -21,13 +20,18 @@
 
 ;; Culled from:
 ;; https://gist.github.com/rotaliator/73daca2dc93c586122a0da57189ece13
-(defn ^:public copy-to-clipboard! [s]
-  (let [el (js/document.createElement "textarea")]
-    (set! (.-value el) s)
-    (.appendChild js/document.body el)
-    (.select el)
-    (js/document.execCommand "copy")
-    (.removeChild js/document.body el)))
+(defn ^:public copy-to-clipboard!
+  ([s]
+   (copy-to-clipboard! js/document.body s))
+  ([node s]
+   (when node 
+     (let [el (js/document.createElement "textarea")]
+       (set! (.-value el) s)
+       (.setAttribute el "class" "offscreen")
+       (.appendChild node el)
+       (.select el)
+       (js/document.execCommand "copy")
+       (.removeChild js/document.body el)))))
 
 (defn ^:public viewport []
   {:inner-height js/window.innerHeight
