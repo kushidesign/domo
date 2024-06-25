@@ -31,7 +31,7 @@
        (.appendChild node el)
        (.select el)
        (js/document.execCommand "copy")
-       (.removeChild js/document.body el)))))
+       (.removeChild node el)))))
 
 (defn ^:public viewport []
   {:inner-height js/window.innerHeight
