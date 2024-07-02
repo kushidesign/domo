@@ -530,3 +530,43 @@
                      (apply f (concat args [%])))
    :on-mouse-down #(when (= 0 (.-button %))
                      (apply f (concat args [%])))})
+
+
+(defn on-key-down-tab-navigation
+  "If arrow keys are pressed when an element is focused, this will properly
+   handle tab navigation. The element which has focus, and all of its siblings
+   elements, must have a `role` of `tab`. All the siblings must be direct
+   children of an element with a `role` of `tablist`. "
+  [e]
+  ;; TODO Add safety checks, with warnings:
+  ;; - every sibling has the `role` of `tab`
+  ;; - parent has the role of `tablist`
+  ;; TODO - what if only other sib is disabled?
+  (let [key (.-key e)] 
+    (when (contains? #{"ArrowRight"
+                       "ArrowLeft"
+                       "ArrowUp"
+                       "ArrowDown"}
+                     key) 
+      (let [el          (et e)
+            next-sib    (next-element-sibling el)
+            prev-sib    (previous-element-sibling el)
+            tablist-el  (nearest-ancestor
+                         el
+                         "[role='tablist']")
+            orientation (some-> tablist-el
+                                (.getAttribute "aria-orientation"))
+            sib         (if (= orientation "vertical")
+                          (case key
+                            "ArrowUp" (or prev-sib next-sib)
+                            "ArrowDown" (or next-sib prev-sib))
+                          (case key
+                            "ArrowRight" (or next-sib prev-sib)
+                            "ArrowLeft" (or prev-sib next-sib)))]
+        (when sib
+          (.click sib)
+          (.focus sib))))))
+
+(defn hover-class-attrs [s]
+  {:on-mouse-enter #(add-class! (cet %) s)
+   :on-mouse-leave #(remove-class! (cet %) s)})
