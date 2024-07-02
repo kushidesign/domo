@@ -504,6 +504,9 @@
   "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
+   The function passed in may accept any number of args, but the last arg needs 
+   to be the event.
+
    Contrived example with reagent:
 
   (defn sidenav-item-handler [label modal? e]
