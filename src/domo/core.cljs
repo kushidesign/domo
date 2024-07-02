@@ -493,6 +493,13 @@
   (when (and prop val)
     (.-matches (js/window.matchMedia (str "(" (as-str prop) ": " (as-str val) ")")))))
 
+(defn ^:public media-supports-hover? []
+  (boolean (or (matches-media? "any-hover" "hover")
+               (matches-media? "hover" "hover"))))
+
+(defn ^:public media-supports-touch? []
+  (boolean (or (matches-media? "pointer" "none")
+               (matches-media? "pointer" "coarse"))))
 
 (defn mouse-down-a11y
   "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
