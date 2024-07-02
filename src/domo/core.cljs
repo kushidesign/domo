@@ -182,12 +182,12 @@
   [el x]
   (some-> el (.hasAttribute (name x))))
 
-;; TODO - Rename?
-(defn ^:public
-  has-class-or-ancestor-with-class?
-  [el]
-  (boolean (or (has-class? el "dropdown-list-item")
-               (nearest-ancestor el ".dropdown-list-item"))))
+
+(defn ^:public matches-or-nearest-ancestor? 
+  [el sel]
+  (when (and el sel) 
+    (or (nearest-ancestor el sel)
+        (= et (.matches el sel)))))
 
 (defn ^:public el-idx
   "Get index of element, relative to its parent"
