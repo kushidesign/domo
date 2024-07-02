@@ -338,14 +338,17 @@
 (defn ^:public data-selector= [attr v]
   (str "[data-" (name attr) "=\"" v "\"]"))
 
+
 (defn ^:public value-selector= [v]
   (str "[value=\"" (str v) "\"]"))
+
 
 (defn ^:public qs 
   ([s]
    (qs js/document s))
   ([el s]
    (.querySelector el s)))
+
 
 (defn ^:public qs-data=
   ([attr v]
@@ -358,9 +361,10 @@
 (defn ^:public toggle-boolean-attribute
   [node attr]
   (let [attr-val (.getAttribute node (name attr))
-        newv (if (= attr-val "false") true false)]
+        newv (if (contains? #{"false" nil} attr-val)
+               true
+               false)]
     (.setAttribute node (name attr) newv)))
-
 
 
 ;; TODO - should this be children (plural) friendly?
