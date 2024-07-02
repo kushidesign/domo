@@ -292,7 +292,7 @@
 
 (defn ^:public computed-style
   ([nm]
-   (css-custom-property-value js/document.documentElement nm))
+   (computed-style js/document.documentElement nm))
   ([el nm]
    (some-> el
            js/window.getComputedStyle
