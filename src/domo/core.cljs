@@ -375,7 +375,6 @@
           (qs (str "[" attr "=\"" v "\"]"))))
 
 
-
 ;; TODO - should this just toggle with all the siblings? 
 (defn ^:public toggle-boolean-attribute-sibling
   [el attr]
