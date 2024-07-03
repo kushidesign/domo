@@ -210,7 +210,8 @@
     (let [observer (js/IntersectionObserver.
                     (fn [^js entries]
                       (if (.-isIntersecting (aget entries 0))
-                        (when intersecting (intersecting))
+                        (when intersecting 
+                          (intersecting))
                         (when not-intersecting (not-intersecting)))
                       (when f (f)))
                     #js {:threshold threshold
@@ -298,7 +299,6 @@
            js/window.getComputedStyle
            (j/get nm))))
 
-;; (j/call-in o [:x :someFn] 42)
 
 (defn dev-only [x]
   (when ^boolean js/goog.DEBUG x))
@@ -311,7 +311,6 @@
   {"^"     :parentNode
    "up"    :parentNode
 
-   "V"     :firstElementChild
    "v"     :firstElementChild
    "down"  :firstElementChild
 
@@ -500,7 +499,7 @@
   (boolean (or (matches-media? "pointer" "none")
                (matches-media? "pointer" "coarse"))))
 
-(defn mouse-down-a11y
+(defn ^:public mouse-down-a11y
   "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
@@ -534,7 +533,7 @@
                      (apply f (concat args [%])))})
 
 
-(defn on-key-down-tab-navigation
+(defn ^:public on-key-down-tab-navigation
   "If arrow keys are pressed when an element is focused, this will properly
    handle tab navigation. The element which has focus, and all of its siblings
    elements, must have a `role` of `tab`. All the siblings must be direct
@@ -569,6 +568,12 @@
           (.click sib)
           (.focus sib))))))
 
-(defn hover-class-attrs [s]
+(defn ^:public hover-class-attrs [s]
   {:on-mouse-enter #(add-class! (cet %) s)
    :on-mouse-leave #(remove-class! (cet %) s)})
+
+
+(defn ^:public raf
+  "Sugar for (js/requestAnimationFrame f)"
+  [f]
+  (js/requestAnimationFrame f))
