@@ -1,6 +1,8 @@
-# domo
+# Domo
 
 A ClojureScript DOM utility library.
+
+<img src="https://img.shields.io/clojars/v/design.kushi/domo.svg?color=0969da&style=flat-square&cacheSeconds=3" alt="Domo Clojars badge"></img>
 
 Many useful helpers for selecting and manipulating DOM elements such as:
 
