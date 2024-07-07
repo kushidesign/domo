@@ -186,8 +186,8 @@
 (defn ^:public matches-or-nearest-ancestor? 
   [el sel]
   (when (and el sel) 
-    (or (nearest-ancestor el sel)
-        (= et (.matches el sel)))))
+    (boolean (or (nearest-ancestor el sel)
+                 (= et (.matches el sel))))))
 
 (defn ^:public el-idx
   "Get index of element, relative to its parent"
