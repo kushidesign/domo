@@ -291,6 +291,36 @@
            js/window.getComputedStyle
            (.getPropertyValue nm))))
 
+;; NEW!
+(defn token->ms
+  "Expects a key or string which maps to an existing design token (css custom
+   property). If the value of the token is a valid (css) microseconds or seconds
+   unit, an integer representing the number of microseconds will be returned.
+
+   Example:
+
+   /* css */
+   :root {
+     --xxfast: 100;
+   }
+
+   ;; cljs
+   (token->ms \"--xxfast\") ; => 100
+   (token->ms :--xxfast)    ; => 100
+   (token->ms 42)           ; => nil
+   "
+  [x]
+  (when-let [s (and (or (string? x) (keyword? x))
+                    (let [nm (name x)]
+                      (when (re-find #"^--\S+$" nm)
+                        (some-> nm css-custom-property-value))))]
+    (let [[_ ms]   (some->> s (re-find #"^([0-9]+)ms$"))
+          [_ secs] (some->> s (re-find #"^([0-9]+)s$"))
+          n        (or ms (some-> secs (* 1000)))
+          ret      (some-> n js/parseInt)]
+      `~ret)))
+
+
 (defn ^:public computed-style
   ([nm]
    (computed-style js/document.documentElement nm))
