@@ -4,7 +4,7 @@ A ClojureScript DOM utility lib
 
 <img src="https://img.shields.io/clojars/v/design.kushi/domo.svg?color=0969da&style=flat-square&cacheSeconds=3" alt="Domo Clojars badge"></img>
 
-<img src="resources/domo-autocomplete.gif" alt="Domo Clojars badge"></img>
+<img src="resources/domo-autocomplete-2.gif" alt="Domo Clojars badge"></img>
 
 
 ## Intro
