@@ -127,6 +127,7 @@
   [el & xs]
   (doseq [x xs] (.remove (.-classList el) (name x))))
 
+;; Add check all xs must be strings
 (defn ^:public add-class!
   [el & xs]
   (doseq [x xs] (.add (.-classList el) (name x))))
