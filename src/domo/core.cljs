@@ -288,9 +288,12 @@
   ([nm]
    (css-custom-property-value nil nm))
   ([el nm]
-   (some-> (or el js/document.documentElement)
-           js/window.getComputedStyle
-           (.getPropertyValue nm))))
+   (or (some-> el
+               js/window.getComputedStyle
+               (.getPropertyValue nm))
+       (some-> js/document.documentElement
+               js/window.getComputedStyle
+               (.getPropertyValue nm)))))
 
 ;; NEW!
 (defn token->ms
