@@ -534,6 +534,14 @@
     (or (true? mm)
         (.-matches mm))))
 
+(defn ^:public dispatch-mousedown-event
+  ([x y]
+   (dispatch-mousedown-event js/document.body x y))
+  ([el x y]
+   (js/console.log el)
+   (js/console.log (dispatch-event! el (mouse-event! :mousedown {:left x :top y})))))
+
+
 (defn ^:public matches-media?
   [prop val]
   (when (and prop val)
