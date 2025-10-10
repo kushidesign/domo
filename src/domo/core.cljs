@@ -479,6 +479,9 @@
 (defn ^:public click-xy [e]
   [e.clientX e.clientY])
 
+(defn ^:public event-xy [e]
+  [e.clientX e.clientY])
+
 ;;macro?
 (defn ^:public el-from-point [x y]
   (.elementFromPoint js/document x y))
