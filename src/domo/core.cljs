@@ -486,7 +486,6 @@
 (defn ^:public el-from-point [x y]
   (.elementFromPoint js/document x y))
 
-
 (defn ^:public duration-property-ms 
   [el property]
   (let [s      (-> el
@@ -500,6 +499,18 @@
                  (js/Math.round (* factor (js/parseFloat s))))]
     ms))
 
+(defn ^:public keyboard-event!
+  ([nm]
+   (keyboard-event! nm nil))
+  ([nm opts]
+   (let [nm (name nm)
+         opts* #js {"view"       js/window
+                    "bubbles"    true
+                    "cancelable" true}
+         opts (if opts
+                (.assign js/Object #js {} opts* opts)
+                opts*)]
+     (new js/KeyboardEvent nm opts))))
 
 (defn ^:public mouse-event!
   ([nm]
