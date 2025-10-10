@@ -608,9 +608,7 @@
       (let [el          (et e)
             next-sib    (next-element-sibling el)
             prev-sib    (previous-element-sibling el)
-            tablist-el  (nearest-ancestor
-                         el
-                         "[role='tablist']")
+            tablist-el  (nearest-ancestor el "[role='tablist']")
             orientation (some-> tablist-el
                                 (.getAttribute "aria-orientation"))
             sib         (if (= orientation "vertical")
@@ -633,3 +631,21 @@
   "Sugar for (js/requestAnimationFrame f)"
   [f]
   (js/requestAnimationFrame f))
+
+(defn ^:public fade-in 
+  ([el]
+   (fade-in el nil))
+  ([el {:keys [display-class opacity-class]}]
+   (add-class! el (or display-class "display-block"))
+   (raf #(add-class! el (or opacity-class "opacity-100%")))))
+
+(defn ^:public fade-out
+  ([el]
+   (fade-out el nil))
+  ([el {:keys [display-class opacity-class fade-duration]
+        :or   {fade-duration 250}}]
+   (set-style! el "transition-duration" (str fade-duration "ms"))
+   (remove-class! el (or opacity-class "opacity-100%"))
+   (js/setTimeout #(remove-class! el (or display-class "display-block"))
+                  (or fade-duration 250))
+   ))
