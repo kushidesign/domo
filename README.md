@@ -1,12 +1,4 @@
-<div align="center"><img src="./resources/sticker-1.gif" width="500"></img></div> 
-<!-- <p align="center">
-<a href="https://clojars.org/design.kushi/domo">
-<img src="https://img.shields.io/clojars/v/design.kushi/domo.svg?color=0969da&style=flat&cacheSeconds=3" alt="Domo on Clojars"></img>
-</a>
-</p> -->
-
-<br>
-
+<p align="left"><sub>どうもありがとう ミスターロボット</sub></p>
 
 # domo
 
