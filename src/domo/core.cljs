@@ -1,8 +1,8 @@
 (ns domo.core
   (:require [applied-science.js-interop :as j]
-            ;; [fireworks.core :refer [? !? ?> !?>]]
-            [clojure.string :as string])
-  (:require-macros [domo.core]))
+            [fireworks.core :refer [? !? ?> !?>]]
+            [clojure.string :as string]))
+
 
 (defn maybe [x pred]
   (when (if (set? pred)
@@ -10,20 +10,31 @@
           (pred x))
     x))
 
+
 (defn ^:public as-str [x]
-  (str (if (or (keyword? x) (symbol? x)) (name x) x)))
+  (str (cond
+         (string? x)
+         x
+
+         (or (keyword? x) (symbol? x)) 
+         (name x)
+
+         :else            
+         x)))
+
 
 (defn ^:public round-by-dpr [n]
   (let [dpr (or js/window.devicePixelRatio 1)
         ret (/ (js/Math.round (* dpr n)) dpr)]
     ret))
 
+
 (defn ^:public css-style-string [m]
   (string/join ";"
                (map (fn [[k v]]
-                      (str (name k)
+                      (str (as-str k)
                            ":"
-                           (if (number? v) (str v) (name v))))
+                           (if (number? v) (str v) (as-str v))))
                     m)))
 
 ;; Culled from:
@@ -41,9 +52,44 @@
        (js/document.execCommand "copy")
        (.removeChild node el)))))
 
+;;******************************************************************************
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Nodes
+;;******************************************************************************
+
+;; Breaking - returns js object
 (defn ^:public viewport
-  "Returns a map describing the viewport inner-width and inner-height.
+  "Returns a js object describing the viewport inner-width and inner-height.
+
+   Example:
+
+   (viewport) =>
+   {inner-width:                     275
+    inner-height-without-scrollbars: 1246
+    inner-width-without-scrollbars:  275
+    inner-height:                    1246}"
+  []
+  #js {:inner-height                    js/window.innerHeight
+       :inner-width                     js/window.innerWidth
+       :inner-height-without-scrollbars js/window.innerHeight 
+       :inner-width-without-scrollbars  js/document.documentElement.clientWidth})
+
+(defn ^:public viewport-map
+  "Returns a cljs hashmap describing the viewport inner-width and inner-height.
 
    Example:
 
@@ -59,32 +105,30 @@
    :inner-width-without-scrollbars  js/document.documentElement.clientWidth})
 
 
-;; BREAkKING!
+;; BREAkKING! order of args swapped
 (defn ^:public viewport-x-fraction 
-  "First argument must be a viewport object produced from domo.core/viewport.
+  "First argument must be a viewport js object produced from domo.core/viewport.
    Second argument must be a number representing an x coordinate. Returns the
    position as a fraction of the viewport width."
   [vp x]
-  (/ x (:inner-width-without-scrollbars vp)))
+  (/ x (j/get vp :inner-width-without-scrollbars)))
 
 
-;; BREAkKING!
+;; BREAkKING! order of args swapped
 (defn ^:public viewport-y-fraction
-  "First argument must be a viewport object produced from domo.core/viewport.
+  "First argument must be a viewport js object produced from domo.core/viewport.
    Second argument must be a number representing an y coordinate. Returns the
    position as a fraction of the viewport height."
   [vp y]
-  (/ y (:inner-height-without-scrollbars vp)))
+  (/ y (j/get vp :inner-height-without-scrollbars)))
 
 
-(defn ^:public client-rect 
-  "Given an dom node, returns a map describing the element's geometry relative
-   to the viewport."
-  [el]
+(defn- client-rect* [el k]
   (let [vp (viewport)]
     (j/let [^:js {:keys [left right top bottom x y width height]}
             (.getBoundingClientRect el)]
-      {:left       left
+      ((if (= k :js) js-obj hash-map)
+       :left       left
        :right      right
        :x-center   (round-by-dpr (- right (/ width 2)))
        :top        top 
@@ -93,20 +137,35 @@
        :width      width
        :height     height
        :x          x
-       :x-fraction (viewport-x-fraction x vp)
+       :x-fraction (viewport-x-fraction vp x)
        :y          y
-       :y-fraction (viewport-y-fraction y vp)
-       :vp         vp})))
+       :y-fraction (viewport-y-fraction vp y)
+       :vp         (if (= k :js) vp (js->clj vp :keywordize-keys true))))))
+
+;; Breaking - returns js object
+(defn ^:public client-rect 
+  "Given an dom node, returns a js-object describing the element's geometry
+   relative to the viewport."
+  [el]
+  (client-rect* el :js))
+
+;; Added
+(defn ^:public client-rect-map 
+  "Given an dom node, returns a cljs map describing the element's geometry
+   relative to the viewport."
+  [el]
+  (client-rect* el :cljs))
 
 
+;; Added
 (defn- screen-quadrant* [x-fraction y-fraction]
   (let [left? (> 0.5 x-fraction)
         top?  (> 0.5 y-fraction)]
-    {:y (if top? :top :bottom)
-     :x (if left? :left :right)}))
+    #js {:y (if top? :top :bottom)
+         :x (if left? :left :right)}))
 
 
-;; Breaking! Now returns map instead of tuple? e.g {:x :left :y :top}
+;; Breaking! Now returns js-object instead of tuple? e.g {:x :left :y :top}
 (defn ^:public screen-quadrant-from-point
   "Given an x and y value, returns a tuple back representing the viewport
    quadrant which contains the point.
@@ -118,23 +177,114 @@
                       (viewport-y-fraction vp y))))
 
 
-;; Breaking! Now returns map instead of tuple? e.g {:x :left :y :top}
+;; Breaking! Now returns js-object instead of tuple? e.g {:x :left :y :top}
 (defn ^:public screen-quadrant
-  "Given a dom node returns a tuple representing the viewport quadrant which
+  "Given a dom node, returns a tuple representing the viewport quadrant which
    which contains the center of the node.
 
-   (screen-quadrant (d/el-by-id \"my-id\")) => [:top :left]"
+   (screen-quadrant (domo.core/el-by-id \"my-id\")) => [:top :left]"
   [node]
   (let [{:keys [x-fraction y-fraction]} (client-rect node)]
     (screen-quadrant* x-fraction y-fraction)))
 
 
+(defn ^:public distance-between-points [x1 y1 x2 y2]
+  (js/Math.sqrt (+ (js/Math.pow (- x2 x1) 2)
+                   (js/Math.pow (- y2 y1) 2))))
+
+(defn ^:public intersecting-client-rects?
+  "Expects two js objects representing client-rect instances."
+  [a b]
+  (not (or (<= (+ (.-left a) (.-width a)) (.-left b))
+           (<= (+ (.-left b) (.-width b)) (.-left a))
+           (<= (+ (.-top a) (.-height a)) (.-top b))
+           (<= (+ (.-top b) (.-height b)) (.-top a)))))
+
+
+(defn ^:public distance-between-els [a b]
+  (j/let [^:js {a-left   :left
+                a-right  :right
+                a-width  :width
+                a-top    :top
+                a-bottom :bottom
+                a-height :height
+                :as      a} (.getBoundingClientRect a)
+          ^:js {b-left   :left
+                b-right  :right
+                b-width  :width
+                b-top    :top
+                b-bottom :bottom
+                b-height :height
+                :as      b} (.getBoundingClientRect b)]
+    (if (intersecting-client-rects? a b)
+      nil
+      (cond
+        ;; check left side areas 
+        (<= a-right b-left)
+        (cond
+          ;; lt corner
+          (<= a-bottom b-top)
+          (distance-between-points a-right a-bottom b-left b-top)
+          
+          ;; lb corner
+          (>= a-top b-bottom)
+          (distance-between-points a-right a-top b-left b-bottom)
+          
+          ;; l
+          :else
+          (- b-left a-right))
+        
+        ;; check right side areas
+        (>= a-left b-right)
+        (cond
+          ;; rt corner
+          (<= a-bottom b-top)
+          (distance-between-points a-left a-bottom b-right b-top)
+          
+          ;; rb corner
+          (>= a-top b-bottom)
+          (distance-between-points a-left a-top b-right b-bottom)
+          
+          ;; rs
+          :else
+          (- a-left b-right))
+        
+        ;; bheck t and b
+        :else
+        (cond
+          ;; t
+          (<= a-bottom b-top)
+          (- b-top a-bottom)
+          
+          ;; b
+          :else
+          (- a-top b-bottom))))))
+
+;;******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Nodes
+;;******************************************************************************
+
 (defn ^:public parent [node] (some-> node .-parentNode))
 
-;; BREAKING next-element-sibling -> next-sibling
+;; ;; BREAKING next-element-sibling -> next-sibling
 (defn ^:public next-sibling [node] (some-> node .-nextElementSibling))
 
-;; BREAKING prvious-element-sibling -> previous-sibling
+;; ;; BREAKING previous-element-sibling -> previous-sibling
 (defn ^:public previous-sibling [node] (some-> node .-previousElementSibling))
 
 (defn ^:public grandparent [node] (some-> node .-parentNode .-parentNode))
@@ -144,21 +294,27 @@
 (defn ^:public current-event-target [e] (some-> e .-currentTarget))
 (def ^:public cet current-event-target)
 
+;; ;; Added
 (defn ^:public current-event-target-value [e] (some-> e .-currentTarget .-value))
 (def ^:public cetv current-event-target-value)
 
+;; ;; Added
 (defn ^:public event-target [e] (some-> e .-target))
 (def ^:public et event-target)
 
+;; ;; Added/
 (defn ^:public event-target-value [e] (some-> e .-target .-value))
 (def ^:public etv event-target-value)
 
+;; ;; Added
 (defn ^:public event-target-value->int [e] (some-> e .-target .-value js/parseInt))
 (def ^:public etv->int event-target-value->int)
 
+;; ;; Added
 (defn ^:public event-target-value->float [e] (some-> e .-target .-value js/parseFloat))
 (def ^:public etv->float event-target-value->float)
 
+;; ;; Added
 (defn ^:public element-node?
   "If supplied value is a dom element such as <div>, <span>, etc., returns true,
    else returns false."
@@ -174,10 +330,21 @@
          #(when (element-node? %)
             (-> % .getBoundingClientRect .-top pos?))))
 
-;; TODO - add safety
+;; ;; TODO - add checks
 (defn ^:public nearest-ancestor
   [el sel]
-  (when sel (some-> el (.closest sel))))
+   (when sel (some-> el (.closest sel))))
+
+
+(defn ^:public class-string
+  "Returns the element's class value as a string"
+  [el]
+  (.getAttribute el "class"))
+
+(defn ^:public class-list
+  "Returns the element's classList, which is a DOMTokenList"
+  [el]
+  (.-classList el))
 
 (defn ^:public toggle-class!
   [el & xs]
@@ -191,40 +358,42 @@
   [el & xs]
   (doseq [x xs] (.add (.-classList el) (as-str x))))
 
+;; BREAKING has-class -> has-class? 
+(defn ^:public has-class?
+  [el classname]
+  (some-> el .-classList (.contains (as-str classname))))
+
 ;; BREAKING removed set-css-var!
-
-;; (defn ^:public set-client-wh-css-vars!
-;;   [el]
-;;   (when el
-;;     (set-css-var! el "--client-width" (str el.clientWidth "px"))
-;;     (set-css-var! el "--client-height" (str el.clientHeight "px"))))
-
-;; (defn ^:public set-neg-client-wh-css-vars!
-;;   [el]
-;;   (set-css-var! el "--client-width" (str "-" el.clientWidth "px"))
-;;   (set-css-var! el "--client-height" (str "-" el.clientHeight "px")))
+;; BREAKING removed set-client-wh-css-vars!
+;; BREAKING removed set-neg-client-wh-css-vars!
 
 (defn ^:public object-assign [& objs]
-  (js/Object.assign.apply nil (.concat #js[] (into-array objs))))
+  (js/Object.assign.apply nil (into-array objs)))
+
+(defn ^:public array-from [iterable]
+  (js/Array.from iterable))
+
+;;******************************************************************************
 
 
 
-;;   /$$$$$$    /$$     /$$               /$$ /$$                   /$$                        
-;;  /$$__  $$  | $$    | $$              |__/| $$                  | $$                        
-;; | $$  \ $$ /$$$$$$ /$$$$$$    /$$$$$$  /$$| $$$$$$$  /$$   /$$ /$$$$$$    /$$$$$$   /$$$$$$$
-;; | $$$$$$$$|_  $$_/|_  $$_/   /$$__  $$| $$| $$__  $$| $$  | $$|_  $$_/   /$$__  $$ /$$_____/
-;; | $$__  $$  | $$    | $$    | $$  \__/| $$| $$  \ $$| $$  | $$  | $$    | $$$$$$$$|  $$$$$$ 
-;; | $$  | $$  | $$ /$$| $$ /$$| $$      | $$| $$  | $$| $$  | $$  | $$ /$$| $$_____/ \____  $$
-;; | $$  | $$  |  $$$$/|  $$$$/| $$      | $$| $$$$$$$/|  $$$$$$/  |  $$$$/|  $$$$$$$ /$$$$$$$/
-;; |__/  |__/   \___/   \___/  |__/      |__/|_______/  \______/    \___/   \_______/|_______/ 
-;;                                                                                             
-;;                                                                                             
-;;                                                                                             
 
-;; data-* attribute
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Attributes
+;;******************************************************************************
 
 (defn ^:public data-attr [el nm]
-  (.getAttribute el (str "data-" (name nm))))
+  (.getAttribute el (str "data-" (as-str nm))))
 
 
 (defn ^:public attribute-true? [el attr]
@@ -251,11 +420,11 @@
 
 (defn ^:public toggle-boolean-attribute!
   [node attr]
-  (let [attr-val (.getAttribute node (name attr))
+  (let [attr-val (.getAttribute node (as-str attr))
         newv (if (contains? #{"false" nil} attr-val)
                true
                false)]
-    (.setAttribute node (name attr) newv)))
+    (.setAttribute node (as-str attr) newv)))
 
 
 ;; BREAKING CHANGE - toggle-attribute -> toggle-attribute!
@@ -288,7 +457,7 @@
 ;; BREAKING - no coll for el, added 1-arity for map
 (defn ^:public set-style!
   ([el m] 
-   (when (map? m) (set-attribute! el "style" (css-style-string m))))
+   (when (map? m) (.setAttribute el "style" (css-style-string m))))
   ([el prop s] 
    (set-style!* el prop s)))
 
@@ -296,21 +465,14 @@
 
 
 
-(defn ^:public set-property!
-  [el attr v]
-  (when el (.setProperty el (as-str attr) v)))
+;; REMOVED set-property!
+
 
 ;; BREAKING - removed set! , shadowed set!
 
 
-;; BREAKING has-class -> has-class? 
-(defn ^:public has-class?
-  [node classname]
-  (some-> node .-classList (.contains (as-str classname))))
-
-
 ;; BREAKING - removed matches-or-has-nearest-ancestor?
-;; TODO - Add safety
+;; TODO - Add checks
 
 
 ;; BREAKING - el-idx -> el-index
@@ -321,21 +483,27 @@
     (let [children-array (.from js/Array (.-children parent))]
       (.indexOf children-array el))))
 
+;;******************************************************************************
+;;******************************************************************************
 
 
 
 
-;;   /$$$$$$   /$$$$$$  /$$$$$$$   /$$$$$$  /$$       /$$       /$$$$$$ /$$   /$$  /$$$$$$ 
-;;  /$$__  $$ /$$__  $$| $$__  $$ /$$__  $$| $$      | $$      |_  $$_/| $$$ | $$ /$$__  $$
-;; | $$  \__/| $$  \__/| $$  \ $$| $$  \ $$| $$      | $$        | $$  | $$$$| $$| $$  \__/
-;; |  $$$$$$ | $$      | $$$$$$$/| $$  | $$| $$      | $$        | $$  | $$ $$ $$| $$ /$$$$
-;;  \____  $$| $$      | $$__  $$| $$  | $$| $$      | $$        | $$  | $$  $$$$| $$|_  $$
-;;  /$$  \ $$| $$    $$| $$  \ $$| $$  | $$| $$      | $$        | $$  | $$\  $$$| $$  \ $$
-;; |  $$$$$$/|  $$$$$$/| $$  | $$|  $$$$$$/| $$$$$$$$| $$$$$$$$ /$$$$$$| $$ \  $$|  $$$$$$/
-;;  \______/  \______/ |__/  |__/ \______/ |________/|________/|______/|__/  \__/ \______/ 
-;;                                                                                         
 
 
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Scrolling
+;;******************************************************************************
 
 ;; TODO - Add tests
 (defn ^:public observe-intersection
@@ -367,7 +535,7 @@
     :or   {x        0
            y        0
            behavior "auto"}}]
-  (let [behavior (name behavior)]
+  (let [behavior (as-str behavior)]
     (j/call
      js/window
      :scrollBy
@@ -382,9 +550,9 @@
    (scroll-into-view! el {}))
   ([el {:keys [inline block behavior]
         :or {block "start" inline "nearest" behavior "auto"}}]
-   (let [opts {"block"    (name block)
-               "inline"   (name inline)
-               "behavior" (name behavior)}]
+   (let [opts {"block"    (as-str block)
+               "inline"   (as-str inline)
+               "behavior" (as-str behavior)}]
      (j/call el :scrollIntoView (clj->js opts)))))
 
 
@@ -504,9 +672,7 @@
   ([nm]
    (computed-style-value js/document.documentElement nm))
   ([el nm]
-   (some-> el
-           js/window.getComputedStyle
-           (j/get nm))))
+   (some-> el js/window.getComputedStyle (j/get nm))))
 
 
 
@@ -571,27 +737,24 @@
             steps)))
 
 
-;; querySelector
 (defn ^:public data-selector= 
   "(data-selector= :foo :bar) => \"[data-foo=\\\"bar\\\"]\""
   [attr v]
   (str "[data-" (as-str attr) "=\"" (as-str v) "\"]"))
 
 
-(defn ^:public value-selector= 
+(defn ^:public value-selector=
   "(value-selector= :baz) => \"[value=\\\"baz\\\"]\""
   [v]
   (str "[value=\"" (as-str v) "\"]"))
 
 
-;macro?
-(defn ^:public qs 
-  ([s]
-   (qs js/document s))
-  ([el s]
-   (.querySelector el s)))
+ (defn ^:public qs 
+   ([s]
+    (qs js/document s))
+   ([el s]
+    (.querySelector el s)))
 
-;macro?
 (defn ^:public qsa
   ([s]
    (qsa js/document s))
@@ -605,11 +768,13 @@
   ([el attr v]
    (some-> el (.querySelector (data-selector= (as-str attr) (as-str v))))))
 
+
 (defn- direct-children-qs-syntax [attr v]
   (str ":scope > *["
        (as-str attr) 
        (when v (str "=\"" (as-str v) "\""))
        "]"))
+
 
 (defn ^:public sibling-with-attribute
   "Returns the first sibling with attribute match"
@@ -622,6 +787,14 @@
                       (qs (direct-children-qs-syntax attr v)))]
      (when-not (= el sib) sib))))
 
+
+;; TODO make macros.namespace
+;; finish guide
+;; small test
+;; update changelog
+;; make list of public fns in readme
+
+
 (defn ^:public siblings-with-attribute
   "Returns a vector of siblings with attribute matches."
   ([el attr]
@@ -630,82 +803,75 @@
    (some-> el
            (zip-get "^")
            (qsa (direct-children-qs-syntax attr v))
-           (->> (reduce (fn [acc sibling]
-                          (if (= el sibling) acc (conj acc sibling)))
-                        [])))))
+           (js/Array.from)
+           (.filter #(not (= el %))))))
 
 
 ;; BREAKING CHANGE - Removed toggle-boolean-attribute-sibling
 ;; BREAKING CHANGE - toggle-attribute-sibling
 
-;;macro?
 (defn ^:public focus! [el] (some-> el .focus))
 
-
-;;macro?
 (defn ^:public click! [el] (some-> el .click))
 
+;; BREAKING CHANGE - removed node-is-of-type?
 
-;; node types
-(defn ^:public node-is-of-type? [el s]
-  (boolean (some-> el .-nodeName string/lower-case (= s))))
+(defn ^:public node-name [el]
+  (some-> el .-nodeName string/lower-case))
 
-
-(defn ^:public el-type [el]
-  (some-> el .-nodeName string/lower-case keyword))
+;;******************************************************************************
 
 
 
 
-;;  /$$$$$$$$ /$$    /$$ /$$$$$$$$ /$$   /$$ /$$$$$$$$ /$$$$$$ 
-;; | $$_____/| $$   | $$| $$_____/| $$$ | $$|__  $$__//$$__  $$
-;; | $$      | $$   | $$| $$      | $$$$| $$   | $$  | $$  \__/
-;; | $$$$$   |  $$ / $$/| $$$$$   | $$ $$ $$   | $$  |  $$$$$$ 
-;; | $$__/    \  $$ $$/ | $$__/   | $$  $$$$   | $$   \____  $$
-;; | $$        \  $$$/  | $$      | $$\  $$$   | $$   /$$  \ $$
-;; | $$$$$$$$   \  $/   | $$$$$$$$| $$ \  $$   | $$  |  $$$$$$/
-;; |________/    \_/    |________/|__/  \__/   |__/   \______/ 
-;;                                                             
 
 
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Events
+;;******************************************************************************
 
 ;; keypresses
-;;macro?
+;; add to macros?
 (defn ^:public arrow-keycode? [e]
   (< 36 e.keyCode 41))
 
-
 ;; text input
 ;; TODO add checks
+;; add to macros?
 (defn ^:public set-caret! [el i]
   (some-> el (.setSelectionRange i i))
   i)
 
-
-;;macro?
+;; add to macros?
 (defn ^:public prevent-default! [e] 
   (some-> e .preventDefault))
 
+;; add to macros?
 (defn ^:public event-xy 
-  "Returns vector of x and y coords of event."
+  "Returns a js array of x and y coords of event."
   [e]
-  [e.clientX e.clientY])
+  #js [e.clientX e.clientY])
 
-
-;;macro?
+;; add to macros?
 (defn ^:public click-xy 
-  "Returns vector of x and y coords of click event."
+  "Returns a js-array of x and y coords of click event."
   [e]
   (event-xy e))
 
-
-;;macro?
+;; add to macros?
 (defn ^:public el-from-point 
   "Expects x and y viewport coordinates and returns the element found at that
    point."
   [x y]
   (.elementFromPoint js/document x y))
-
 
 ;; TODO - add check, with warning
 (defn ^:public duration-property-ms 
@@ -720,33 +886,35 @@
    animation-iteration-count
    transition
    animation"
-  [el property]
-  (let [s (as-str property)]
-    (when (contains? #{"transition-duration"
-                       "transition-delay"
-                       "animation-duration"
-                       "animation-delay"
-                       "animation-iteration-count"
-                       "transition"
-                       "animation"}
-                     s)
-     (let [s      (-> el
-                      (computed-style-value property)
-                      (string/split #",")
-                      first
-                      string/trim)
-           factor (cond (string/ends-with? s "ms") 1
-                        (string/ends-with? s "s") 1000)
-           ms     (when factor
-                    (js/Math.round (* factor (js/parseFloat s))))]
-       ms))))
+  ([el]
+   (duration-property-ms el "transition-duration"))
+  ([el property]
+   (let [s (as-str property)]
+     (when (contains? #{"transition-duration"
+                        "transition-delay"
+                        "animation-duration"
+                        "animation-delay"
+                        "animation-iteration-count"
+                        "transition"
+                        "animation"}
+                      s)
+       (let [s      (-> el
+                        (computed-style-value property)
+                        (string/split #",")
+                        first
+                        string/trim)
+             factor (cond (string/ends-with? s "ms") 1
+                          (string/ends-with? s "s") 1000)
+             ms     (when factor
+                      (js/Math.round (* factor (js/parseFloat s))))]
+         ms)))))
 
 
 (defn ^:public keyboard-event!
   ([nm]
    (keyboard-event! nm nil))
   ([nm opts]
-   (let [nm (name nm)
+   (let [nm (as-str nm)
          opts* #js {"view"       js/window
                     "bubbles"    true
                     "cancelable" true}
@@ -764,18 +932,20 @@
          opts (if opts
                 (.assign js/Object #js {} opts* opts)
                 opts*)]
-     (new js/MouseEvent (name nm) opts))))
+     (new js/MouseEvent (as-str nm) opts))))
 
 
+;; add to macros?
 (defn ^:public dispatch-event!
   ([el e]
    (some-> el (.dispatchEvent e))))
 
 
+;; add to macros?
 (defn ^:public add-event-listener! [el nm f opts]
-  (.addEventListener el (name nm) f opts))
+  (.addEventListener el (as-str nm) f opts))
 
-
+;; add to macros?
 (defn ^:public prefers-reduced-motion? []
   (let [mm (.matchMedia js/window "(prefers-reduced-motion: reduce)")]
     (or (true? mm)
@@ -789,7 +959,7 @@
    (js/console.log el)
    (js/console.log (dispatch-event! el (mouse-event! :mousedown {:left x :top y})))))
 
-
+;; add to macros?
 (defn ^:public matches-media?
   "On a desktop:
    (matches-media? \"any-hover\" \"hover\") => true
@@ -813,7 +983,7 @@
 
 
 ;; Investigate a11y alignment between mousedown and keydown
-(defn ^:public mouse-down-a11y
+(defn ^:public mouse-down-a11y-map
   "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
@@ -846,7 +1016,8 @@
    :on-mouse-down #(when (= 0 (.-button %))
                      (apply f (concat args [%])))})
 
-(defn ^:public mouse-down-a11y-js
+;; Breaking - returns js object
+(defn ^:public mouse-down-a11y
   "Sets up a partial attributes js-obj for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
@@ -881,11 +1052,17 @@
 
 
 ;; Breaking hover-class-attrs -> add-class-on-mouse-enter-attrs
+;; Breaking now returns js-object
 (defn ^:public add-class-on-mouse-enter-attrs 
   [s]
-  {:on-mouse-enter #(add-class! (cet %) s)
-   :on-mouse-leave #(remove-class! (cet %) s)})
+  #js {:on-mouse-enter #(.add (.-classList (some-> % .-currentTarget)) (as-str s))
+       :on-mouse-leave #(.remove (.-classList (some-> % .-currentTarget)) (as-str s))})
 
+;; Added
+(defn ^:public add-class-on-mouse-enter-attrs-map
+  [s]
+  {:on-mouse-enter #(.add (.-classList (some-> % .-currentTarget)) (as-str s))
+   :on-mouse-leave #(.remove (.-classList (some-> % .-currentTarget)) (as-str s))})
 
 (defn ^:public raf
   "Sugar for (js/requestAnimationFrame f)"
@@ -949,3 +1126,10 @@
      (set-style! el "opacity" "0")
      (js/setTimeout #(set-style! el "display" "none")
                     (or fade-duration fade-duration)))))
+
+
+
+
+
+
+

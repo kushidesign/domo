@@ -1,0 +1,2 @@
+{:linters {:redundant-do {:level :off}}
+ :lint-as {applied-science.js-interop/let clojure.core/let}}
