@@ -4,6 +4,12 @@
 ## Unreleased
  - 
 
+## 0.4.0
+2024-11-25
+
+### Initial alpha release
+
+
 ## 0.1.0
 2024-03-22
 
