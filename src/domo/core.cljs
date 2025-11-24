@@ -1,21 +1,40 @@
 (ns domo.core
   (:require [applied-science.js-interop :as j]
+            [fireworks.core :refer [? !? ?> !?>]]
             [clojure.string :as string]))
 
+
+(defn maybe [x pred]
+  (when (if (set? pred)
+          (contains? pred x)
+          (pred x))
+    x))
+
+
 (defn ^:public as-str [x]
-  (str (if (or (keyword? x) (symbol? x)) (name x) x)))
+  (str (cond
+         (string? x)
+         x
+
+         (or (keyword? x) (symbol? x)) 
+         (name x)
+
+         :else            
+         x)))
+
 
 (defn ^:public round-by-dpr [n]
   (let [dpr (or js/window.devicePixelRatio 1)
         ret (/ (js/Math.round (* dpr n)) dpr)]
     ret))
 
+
 (defn ^:public css-style-string [m]
   (string/join ";"
                (map (fn [[k v]]
-                      (str (name k)
+                      (str (as-str k)
                            ":"
-                           (if (number? v) (str v) (name v))))
+                           (if (number? v) (str v) (as-str v))))
                     m)))
 
 ;; Culled from:
@@ -23,35 +42,93 @@
 (defn ^:public copy-to-clipboard!
   ([s]
    (copy-to-clipboard! js/document.body s))
-  ([node s]
-   (when node 
-     (let [el (js/document.createElement "textarea")]
-       (set! (.-value el) s)
-       (.setAttribute el "class" "offscreen")
-       (.appendChild node el)
-       (.select el)
+  ([el s]
+   (when el 
+     (let [ta (js/document.createElement "textarea")]
+       (set! (.-value ta) s)
+       (.setAttribute ta "class" "offscreen")
+       (.appendChild el ta)
+       (.select ta)
        (js/document.execCommand "copy")
-       (.removeChild node el)))))
+       (.removeChild el ta)))))
 
-(defn ^:public viewport []
-  {:inner-height js/window.innerHeight
-   :inner-width js/window.innerWidth
+;;******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Nodes
+;;******************************************************************************
+
+;; Breaking - returns js object
+(defn ^:public viewport
+  "Returns a js object describing the viewport inner-width and inner-height.
+
+   Example:
+
+   (viewport) =>
+   {inner-width:                     275
+    inner-height-without-scrollbars: 1246
+    inner-width-without-scrollbars:  275
+    inner-height:                    1246}"
+  []
+  #js {:inner-height                    js/window.innerHeight
+       :inner-width                     js/window.innerWidth
+       :inner-height-without-scrollbars js/window.innerHeight 
+       :inner-width-without-scrollbars  js/document.documentElement.clientWidth})
+
+(defn ^:public viewport-map
+  "Returns a cljs hashmap describing the viewport inner-width and inner-height.
+
+   Example:
+
+   (viewport) =>
+   {:inner-width                     275
+    :inner-height-without-scrollbars 1246
+    :inner-width-without-scrollbars  275
+    :inner-height                    1246}"
+  []
+  {:inner-height                    js/window.innerHeight
+   :inner-width                     js/window.innerWidth
    :inner-height-without-scrollbars js/window.innerHeight 
-   :inner-width-without-scrollbars js/document.documentElement.clientWidth})
+   :inner-width-without-scrollbars  js/document.documentElement.clientWidth})
 
-(defn- viewport-x-fraction [x vp]
-  (/ x (:inner-width-without-scrollbars vp)))
 
-(defn- viewport-y-fraction [y vp]
-  (/ y (:inner-height-without-scrollbars vp)))
+;; BREAkKING! order of args swapped
+(defn ^:public viewport-x-fraction 
+  "First argument must be a viewport js object produced from domo.core/viewport.
+   Second argument must be a number representing an x coordinate. Returns the
+   position as a fraction of the viewport width."
+  [vp x]
+  (/ x (j/get vp :inner-width-without-scrollbars)))
 
-;; TODO use x-center and y-center instead of center and y-center
-(defn ^:public client-rect [el]
-  
+
+;; BREAkKING! order of args swapped
+(defn ^:public viewport-y-fraction
+  "First argument must be a viewport js object produced from domo.core/viewport.
+   Second argument must be a number representing an y coordinate. Returns the
+   position as a fraction of the viewport height."
+  [vp y]
+  (/ y (j/get vp :inner-height-without-scrollbars)))
+
+
+(defn- client-rect* [el k]
   (let [vp (viewport)]
     (j/let [^:js {:keys [left right top bottom x y width height]}
             (.getBoundingClientRect el)]
-      {:left       left
+      ((if (= k :js) js-obj hash-map)
+       :left       left
        :right      right
        :x-center   (round-by-dpr (- right (/ width 2)))
        :top        top 
@@ -60,145 +137,376 @@
        :width      width
        :height     height
        :x          x
-       :x-fraction (viewport-x-fraction x vp)
+       :x-fraction (viewport-x-fraction vp x)
        :y          y
-       :y-fraction (viewport-y-fraction y vp)
-       :vp         vp})))
+       :y-fraction (viewport-y-fraction vp y)
+       :vp         (if (= k :js) vp (js->clj vp :keywordize-keys true))))))
 
+;; Breaking - returns js object
+(defn ^:public client-rect 
+  "Given an dom node, returns a js-object describing the element's geometry
+   relative to the viewport."
+  [el]
+  (client-rect* el :js))
+
+;; Added
+(defn ^:public client-rect-map 
+  "Given an dom node, returns a cljs map describing the element's geometry
+   relative to the viewport."
+  [el]
+  (client-rect* el :cljs))
+
+
+;; Added
 (defn- screen-quadrant* [x-fraction y-fraction]
   (let [left? (> 0.5 x-fraction)
         top?  (> 0.5 y-fraction)]
-    [(if top? :top :bottom)
-     (if left? :left :right)]))
+    #js {:y (if top? :top :bottom)
+         :x (if left? :left :right)}))
 
+
+;; Breaking! Now returns js-object instead of tuple? e.g {:x :left :y :top}
 (defn ^:public screen-quadrant-from-point
-  "Pass an x and y val and get a tuple back reprenting the quadrant in which the point lives.
+  "Given an x and y value, returns a tuple back representing the viewport
+   quadrant which contains the point.
+
    (screen-quadrant 10 20) => [:top :left]"
   [x y]
   (let [vp (viewport)]
-    (screen-quadrant* (viewport-x-fraction x vp)
-                      (viewport-y-fraction y vp))))
+    (screen-quadrant* (viewport-x-fraction vp x)
+                      (viewport-y-fraction vp y))))
 
 
+;; Breaking! Now returns js-object instead of tuple? e.g {:x :left :y :top}
 (defn ^:public screen-quadrant
-  "Pass a dom node and get a tuple back reprenting the quadrant in which the center of the node lives.
-   (screen-quadrant (js/document.getElementById \"my-id\")) => [:top :left]"
-  [node]
-  (let [{:keys [x-fraction y-fraction]} (client-rect node)]
+  "Given a dom node, returns a tuple representing the viewport quadrant which
+   which contains the center of the node.
+
+   (screen-quadrant (domo.core/el-by-id \"my-id\")) => [:top :left]"
+  [el]
+  (let [{:keys [x-fraction y-fraction]} (client-rect el)]
     (screen-quadrant* x-fraction y-fraction)))
 
 
-(defn ^:public parent [node] (some-> node .-parentNode))
-(defn ^:public next-element-sibling [node] (some-> node .-nextElementSibling))
-(defn ^:public previous-element-sibling [node] (some-> node .-previousElementSibling))
-(defn ^:public grandparent [node] (some-> node .-parentNode .-parentNode))
-(defn ^:public has-class [node classname] (some-> node .-classList (.contains (name classname))))
-(defn ^:public attribute-true? [node attr] (when node (= "true" (.getAttribute node (name attr)))))
+(defn ^:public distance-between-points [x1 y1 x2 y2]
+  (js/Math.sqrt (+ (js/Math.pow (- x2 x1) 2)
+                   (js/Math.pow (- y2 y1) 2))))
 
-(defn ^:public cet [e] (some-> e .-currentTarget))
-(defn ^:public cetv [e] (some-> e .-currentTarget .-value))
-(defn ^:public et [e] (some-> e .-target))
-(defn ^:public etv [e] (some-> e .-target .-value))
-(defn ^:public etv->int [e] (some-> e .-target .-value js/parseInt))
-(defn ^:public etv->float [e] (some-> e .-target .-value js/parseFloat))
+(defn ^:public intersecting-client-rects?
+  "Expects two js objects representing client-rect instances."
+  [a b]
+  (not (or (<= (+ (.-left a) (.-width a)) (.-left b))
+           (<= (+ (.-left b) (.-width b)) (.-left a))
+           (<= (+ (.-top a) (.-height a)) (.-top b))
+           (<= (+ (.-top b) (.-height b)) (.-top a)))))
 
+
+(defn ^:public distance-between-els [a b]
+  (j/let [^:js {a-left   :left
+                a-right  :right
+                a-width  :width
+                a-top    :top
+                a-bottom :bottom
+                a-height :height
+                :as      a} (.getBoundingClientRect a)
+          ^:js {b-left   :left
+                b-right  :right
+                b-width  :width
+                b-top    :top
+                b-bottom :bottom
+                b-height :height
+                :as      b} (.getBoundingClientRect b)]
+    (if (intersecting-client-rects? a b)
+      nil
+      (cond
+        ;; check left side areas 
+        (<= a-right b-left)
+        (cond
+          ;; lt corner
+          (<= a-bottom b-top)
+          (distance-between-points a-right a-bottom b-left b-top)
+          
+          ;; lb corner
+          (>= a-top b-bottom)
+          (distance-between-points a-right a-top b-left b-bottom)
+          
+          ;; l
+          :else
+          (- b-left a-right))
+        
+        ;; check right side areas
+        (>= a-left b-right)
+        (cond
+          ;; rt corner
+          (<= a-bottom b-top)
+          (distance-between-points a-left a-bottom b-right b-top)
+          
+          ;; rb corner
+          (>= a-top b-bottom)
+          (distance-between-points a-left a-top b-right b-bottom)
+          
+          ;; rs
+          :else
+          (- a-left b-right))
+        
+        ;; bheck t and b
+        :else
+        (cond
+          ;; t
+          (<= a-bottom b-top)
+          (- b-top a-bottom)
+          
+          ;; b
+          :else
+          (- a-top b-bottom))))))
+
+;;******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Nodes
+;;******************************************************************************
+
+(defn ^:public parent [el] (some-> el .-parentNode))
+
+;; ;; BREAKING next-element-sibling -> next-sibling
+(defn ^:public next-sibling [el] (some-> el .-nextElementSibling))
+
+;; ;; BREAKING previous-element-sibling -> previous-sibling
+(defn ^:public previous-sibling [el] (some-> el .-previousElementSibling))
+
+(defn ^:public grandparent [el] (some-> el .-parentNode .-parentNode))
+
+
+;; TODO - test these with reagent
+(defn ^:public current-event-target [e] (some-> e .-currentTarget))
+(def ^:public cet current-event-target)
+
+;; ;; Added
+(defn ^:public current-event-target-value [e] (some-> e .-currentTarget .-value))
+(def ^:public cetv current-event-target-value)
+
+;; ;; Added
+(defn ^:public event-target [e] (some-> e .-target))
+(def ^:public et event-target)
+
+;; ;; Added/
+(defn ^:public event-target-value [e] (some-> e .-target .-value))
+(def ^:public etv event-target-value)
+
+;; ;; Added
+(defn ^:public event-target-value->int [e] (some-> e .-target .-value js/parseInt))
+(def ^:public etv->int event-target-value->int)
+
+;; ;; Added
+(defn ^:public event-target-value->float [e] (some-> e .-target .-value js/parseFloat))
+(def ^:public etv->float event-target-value->float)
+
+;; ;; Added
+(defn ^:public element-node?
+  "If supplied value is a dom element such as <div>, <span>, etc., returns true,
+   else returns false."
+  [el]
+  (boolean (some-> el .-nodeType (= 1))))
 
 (defn ^:public el-by-id [id]
   (js/document.getElementById id))
 
-;; TODO - do this in pure js interop
 (defn ^:public get-first-onscreen-child-from-top
   [el]
-  (first 
-   (filter
-    (fn [node]
-      (pos? (.-top (.getBoundingClientRect node))))
-    (js->clj el.childNodes))))
+  (.find (js/Array.from el.childNodes)
+         #(when (element-node? %)
+            (-> % .getBoundingClientRect .-top pos?))))
 
+;; ;; TODO - add checks
 (defn ^:public nearest-ancestor
-  [node sel]
-  (when sel (some-> node (.closest sel))))
+  [el sel]
+   (when sel (some-> el (.closest sel))))
+
+
+(defn ^:public class-string
+  "Returns the element's class value as a string"
+  [el]
+  (.getAttribute el "class"))
+
+(defn ^:public class-list
+  "Returns the element's classList, which is a DOMTokenList"
+  [el]
+  (.-classList el))
 
 (defn ^:public toggle-class!
   [el & xs]
-  (doseq [x xs] (.toggle (.-classList el) (name x))))
+  (doseq [x xs] (.toggle (.-classList el) (as-str x))))
 
 (defn ^:public remove-class!
   [el & xs]
-  (doseq [x xs] (.remove (.-classList el) (name x))))
+  (doseq [x xs] (.remove (.-classList el) (as-str x))))
 
-;; Add check all xs must be strings
 (defn ^:public add-class!
   [el & xs]
-  (doseq [x xs] (.add (.-classList el) (name x))))
+  (doseq [x xs] (.add (.-classList el) (as-str x))))
 
-(defn ^:public set-css-var!
-  [el prop val]
-  (when el (.setProperty el.style prop val)))
+;; BREAKING has-class -> has-class? 
+(defn ^:public has-class?
+  [el classname]
+  (some-> el .-classList (.contains (as-str classname))))
 
-(defn ^:public set-client-wh-css-vars!
-  [el]
-  (when el
-    (set-css-var! el "--client-width" (str el.clientWidth "px"))
-    (set-css-var! el "--client-height" (str el.clientHeight "px"))))
+;; BREAKING removed set-css-var!
+;; BREAKING removed set-client-wh-css-vars!
+;; BREAKING removed set-neg-client-wh-css-vars!
 
-(defn ^:public set-neg-client-wh-css-vars!
-  [el]
-  (set-css-var! el "--client-width" (str "-" el.clientWidth "px"))
-  (set-css-var! el "--client-height" (str "-" el.clientHeight "px")))
+(defn ^:public object-assign [& objs]
+  (js/Object.assign.apply nil (into-array objs)))
 
-(defn set-style!*
-  [el prop s]
-  (when el (.setProperty el.style (name prop) s)))
+(defn ^:public array-from [iterable]
+  (js/Array.from iterable))
 
-;; optionally take a coll of styles?
-(defn ^:public set-style!
-  [el prop s]
-  (if (coll? el)
-    (doseq [x el] (set-style!* x prop s))
-    (set-style!* el prop s)))
+;;******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Attributes
+;;******************************************************************************
+
+(defn ^:public data-attr [el nm]
+  (.getAttribute el (str "data-" (as-str nm))))
+
+
+(defn ^:public attribute-true? [el attr]
+  (when el (= "true" (.getAttribute el (as-str attr)))))
+
+
+(defn ^:public attribute-false? [el attr] 
+  (when el (= "false" (.getAttribute el (as-str attr)))))
+
+
+(defn ^:public has-attribute? [el attr] 
+  (boolean (some-> el (.getAttribute (as-str attr)))))
+
 
 (defn ^:public set-attribute!
   [el attr v]
-  (when el (.setAttribute el (name attr) v)))
+  (when el (.setAttribute el (as-str attr) v)))
+
 
 (defn ^:public remove-attribute!
   [el attr]
-  (when el (.removeAttribute el (name attr))))
-
-(defn ^:public set-property!
-  [el attr v]
-  (when el (.setProperty el (name attr) v)))
-
-(defn ^:public set!
-  [el attr v]
-  (when el (j/assoc! el (name attr) v)))
-
-(defn ^:public has-class?
-  [el s]
-  (when el (.contains (.-classList el) (name s))))
-
-;; check if string or keyword
-(defn ^:public has-attribute?
-  [el x]
-  (some-> el (.hasAttribute (name x))))
+  (when el (.removeAttribute el (as-str attr))))
 
 
-(defn ^:public matches-or-nearest-ancestor? 
-  [el sel]
-  (when (and el sel) 
-    (boolean (or (nearest-ancestor el sel)
-                 (= et (.matches el sel))))))
+(defn ^:public toggle-boolean-attribute!
+  [el attr]
+  (let [attr-val (.getAttribute el (as-str attr))
+        newv (if (contains? #{"false" nil} attr-val)
+               true
+               false)]
+    (.setAttribute el (as-str attr) newv)))
 
-(defn ^:public el-idx
+
+;; BREAKING CHANGE - toggle-attribute -> toggle-attribute!
+(defn ^:public toggle-attribute!
+  "Toggles an attribute between provided values a and b, depending on the
+   current value of the attribute.
+   
+   Given the following dom node bound to `el`:
+   
+   <div data-foo=\"baz\">
+   
+   (toggle-attribute! el :data-foo :baz :bar)
+   
+   mutates the dome to:
+   <div data-foo=\"bar\">"
+  [el attr a b]
+  (let [attr (as-str attr)]
+    (when-let [current-value (-> el (.getAttribute attr))]
+      (let [a (as-str a)
+            b (as-str b)]
+        (-> el 
+            (.setAttribute attr 
+                           (if (= current-value a) b a)))))))
+
+
+(defn- set-style!*
+  [el prop s]
+  (when el (.setProperty el.style (as-str prop) s)))
+
+;; BREAKING - no coll for el, added 1-arity for map
+(defn ^:public set-style!
+  ([el m] 
+   (when (map? m) (.setAttribute el "style" (css-style-string m))))
+  ([el prop s] 
+   (set-style!* el prop s)))
+
+;; TODO - Add merge-style!
+
+
+
+;; REMOVED set-property!
+
+
+;; BREAKING - removed set! , shadowed set!
+
+
+;; BREAKING - removed matches-or-has-nearest-ancestor?
+;; TODO - Add checks
+
+
+;; BREAKING - el-idx -> el-index
+(defn ^:public el-index
   "Get index of element, relative to its parent"
   [el]
   (when-let [parent (some-> el .-parentNode)]
     (let [children-array (.from js/Array (.-children parent))]
       (.indexOf children-array el))))
 
-;; figure out thing
-(defn observe-intersection
+;;******************************************************************************
+;;******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Scrolling
+;;******************************************************************************
+
+;; TODO - Add tests
+(defn ^:public observe-intersection
   [{:keys [element
            intersecting
            not-intersecting
@@ -220,82 +528,113 @@
       (when observer
         (.observe observer element)))))
 
-;; figure out thing
-(defn scroll-by!
+
+;; TODO - Add tests 
+(defn ^:public scroll-by!
   [{:keys [x y behavior]
     :or   {x        0
            y        0
            behavior "auto"}}]
-  (let [behavior (name behavior)]
+  (let [behavior (as-str behavior)]
     (j/call
      js/window
      :scrollBy
      #js
       {"top" y "left" x "behavior" behavior})))
 
-;; figure out thing
-(defn scroll-into-view!
+
+;; TODO - Add tests 
+;; Add checks for values
+(defn ^:public scroll-into-view!
   ([el]
    (scroll-into-view! el {}))
   ([el {:keys [inline block behavior]
         :or {block "start" inline "nearest" behavior "auto"}}]
-   (let [opts {"block"    (name block)
-               "inline"   (name inline)
-               "behavior" (name behavior)}]
+   (let [opts {"block"    (as-str block)
+               "inline"   (as-str inline)
+               "behavior" (as-str behavior)}]
      (j/call el :scrollIntoView (clj->js opts)))))
+
 
 (defn ^:public scroll-to-top! [] (js/window.scrollTo 0 0))
 
+
 ;; Figure out best heuristic here .-dir vs .-direction vs `writing-mode`(css)
-(defn ^:public writing-direction []
+(defn ^:public writing-direction
+  []
   (.-direction (js/window.getComputedStyle js/document.documentElement)))
 
-(defn as-css-custom-property-name [v]
-  (when-let [nm* (some-> v as-str)]
-    (let [dollar-syntax? (and (keyword? v) (string/starts-with? nm* "$"))
-          nm* (if dollar-syntax? (subs nm* 1) nm*)]
-      (str (when-not (string/starts-with? nm* "--") "--") nm*))))
 
+;; BREAKING CHANGE - removed as-css-custom-property name
+
+
+
+;; Added this
+(defn- valid-css-custom-property-name [v]
+  (cond (and (string? v) (string/starts-with? v "--"))
+        v
+        (and (keyword? v) (string/starts-with? (name v) "--"))
+        (name v)))
+
+;; Added this
+(defn- value-data [s]
+  (let [ret {:string s}
+        m   (when-let [matches 
+                       (re-find #"^(\-?[0-9]+(?:(\.)[0-9]+)?)([a-z-_]+)?$"
+                                s)]
+              (let [decimal? (boolean (nth matches 2 nil))
+                    value    (nth matches 1 nil)
+                    value    (if decimal?
+                               (some-> value js/parseFloat)
+                               (some-> value js/parseInt))]
+                {:unitless-value value
+                 :units          (nth matches 3 nil)}))]
+    (merge ret m))
+  )
+
+;; BREAKING CHANGE :value to :unitless-value
 (defn ^:public css-custom-property-value-data
   "Gets computed style for css custom property.
    First checks for the computed style on the element, if supplied.
    If element is not supplied, checks for the computed style on the root html.
-   Returns a map of values."
+   Returns a map of values.
+   
+   (css-custom-property-value-data my-el \"--sz\") =>
+   {:string \"500px\" :value  500 :units  \"px\"}
+   
+
+   If the css-custom-property is not set, returns empty string:
+   (css-custom-property-value-data my-el \"--szzz\") =>
+   {:string \"\"}"
+
   ([nm]
    (css-custom-property-value-data nil nm))
   ([el nm]
-   (when-let [nm (as-css-custom-property-name nm)]
-     (when-let [s (some-> (or el js/document.documentElement)
-                          js/window.getComputedStyle
-                          (.getPropertyValue nm))]
-       (let [ret {:string s}
-             m   (when-let [matches (re-find #"^(\-?[0-9]+(?:(\.)[0-9]+)?)([a-z-_]+)?$"
-                                             s)]
-                   (let [decimal? (boolean (nth matches 2 nil))
-                         value    (nth matches 1 nil)
-                         value    (if decimal?
-                                    (some-> value js/parseFloat)
-                                    (some-> value js/parseInt))]
-                     {:value value
-                      :units (nth matches 3 nil)}))]
-         (merge ret m))))))
+   (when-let [nm (valid-css-custom-property-name nm)]
+     (some-> (or el js/document.documentElement)
+             js/window.getComputedStyle
+             (.getPropertyValue nm)
+             value-data))))
 
+
+;; BREAKING CHANGE - stricter input
 (defn ^:public css-custom-property-value
   "Gets computed style for css custom property.
-   First checks for the computed sytle on the element, if supplied.
+   First checks for the computed style on the element, if supplied.
    If element is not supplied, checks for the computed style on the root html.
    Returns a string."
   ([nm]
    (css-custom-property-value nil nm))
   ([el nm]
-   (or (some-> el
-               js/window.getComputedStyle
-               (.getPropertyValue nm))
-       (some-> js/document.documentElement
-               js/window.getComputedStyle
-               (.getPropertyValue nm)))))
+   (when-let [nm (valid-css-custom-property-name nm)]
+     (or (some-> el
+                 js/window.getComputedStyle
+                 (.getPropertyValue nm))
+         (some-> js/document.documentElement
+                 js/window.getComputedStyle
+                 (.getPropertyValue nm))))))
 
-;; NEW!
+
 (defn token->ms
   "Expects a key or string which maps to an existing design token (css custom
    property). If the value of the token is a valid (css) microseconds or seconds
@@ -313,31 +652,43 @@
    (token->ms :--xxfast)    ; => 100
    (token->ms 42)           ; => nil
    "
-  [x]
-  (when-let [s (and (or (string? x) (keyword? x))
-                    (let [nm (name x)]
-                      (when (re-find #"^--\S+$" nm)
-                        (some-> nm css-custom-property-value))))]
-    (let [[_ ms]   (some->> s (re-find #"^([0-9]+)ms$"))
-          [_ secs] (some->> s (re-find #"^([0-9]+)s$"))
-          n        (or ms (some-> secs (* 1000)))
-          ret      (some-> n js/parseInt)]
-      `~ret)))
+  ([x]
+   (token->ms js/document.documentElement
+              x))
+  ([el x] 
+   (when el
+     (when-let [s (some->> x
+                           valid-css-custom-property-name
+                           (css-custom-property-value el))]
+       (let [[_ ms]   (some->> s (re-find #"^([0-9]+)ms$"))
+             [_ secs] (some->> s (re-find #"^([0-9]+)s$"))
+             n        (or ms (some-> secs (* 1000)))
+             ret      (some-> n js/parseInt)]
+         ret)))))
 
 
-(defn ^:public computed-style
+;; BREAKING CHANGE - computed-style -> computed-style-value
+(defn ^:public computed-style-value
   ([nm]
-   (computed-style js/document.documentElement nm))
+   (computed-style-value js/document.documentElement nm))
+  ([el nm]
+   (some-> el js/window.getComputedStyle (j/get nm))))
+
+
+
+;; ADDED this
+(defn ^:public computed-style-value-data
+  ([nm]
+   (computed-style-value-data js/document.documentElement nm))
   ([el nm]
    (some-> el
            js/window.getComputedStyle
-           (j/get nm))))
+           (j/get nm)
+           value-data)))
 
 
-(defn dev-only [x]
+(defn ^:public dev-only [x]
   (when ^boolean js/goog.DEBUG x))
-
-;; Events
 
 
 ;; Primitive Zipper navigation
@@ -355,9 +706,28 @@
    "left"  :previousElementSibling
    })
 
-(defn ^:public zip-get [el steps]
+
+(defn ^:public zip-get
+  "Zipper-esque navigation for the DOM.
+   
+   The following 4 calls are equivalent:
+
+   (def el (domo.core/el-by-id \"my-id\"))
+
+   (zip-get el \"v > >\")
+
+   (zip-get el [:v :> :>])
+
+   (zip-get app-el '[v > >])
+
+   (zip-get el \"down right right\")
+
+   (zip-get el [:down :right :right])
+
+   (zip-get el '[down right right])"
+  [el steps]
   (reduce (fn [el x]
-            (let [k (get zip-nav x x)]
+            (let [k (get zip-nav (as-str x) x)]
               ;; TODO - Warning here in case x in not one of:
               ;; :parentNode ;; :firstElementChild ;; :nextElementSibling ;; :previousElementSibling
               (some-> el (j/get k nil))))
@@ -367,143 +737,184 @@
             steps)))
 
 
-;; querySelector
-(defn ^:public data-selector= [attr v]
-  (str "[data-" (name attr) "=\"" v "\"]"))
+(defn ^:public data-selector= 
+  "(data-selector= :foo :bar) => \"[data-foo=\\\"bar\\\"]\""
+  [attr v]
+  (str "[data-" (as-str attr) "=\"" (as-str v) "\"]"))
 
 
-(defn ^:public value-selector= [v]
-  (str "[value=\"" (str v) "\"]"))
+(defn ^:public value-selector=
+  "(value-selector= :baz) => \"[value=\\\"baz\\\"]\""
+  [v]
+  (str "[value=\"" (as-str v) "\"]"))
 
 
-(defn ^:public qs 
+ (defn ^:public qs 
+   ([s]
+    (qs js/document s))
+   ([el s]
+    (.querySelector el s)))
+
+(defn ^:public qsa
   ([s]
-   (qs js/document s))
+   (qsa js/document s))
   ([el s]
-   (.querySelector el s)))
+   (.querySelectorAll el s)))
 
 
 (defn ^:public qs-data=
   ([attr v]
-   (qs-data= js/document attr v))
+   (qs-data= js/document (as-str attr) (as-str v)))
   ([el attr v]
-   (.querySelector el (data-selector= attr (str v)))))
+   (some-> el (.querySelector (data-selector= (as-str attr) (as-str v))))))
 
 
-;; toggling attributes
-(defn ^:public toggle-boolean-attribute
-  [node attr]
-  (let [attr-val (.getAttribute node (name attr))
-        newv (if (contains? #{"false" nil} attr-val)
-               true
-               false)]
-    (.setAttribute node (name attr) newv)))
+(defn- direct-children-qs-syntax [attr v]
+  (str ":scope > *["
+       (as-str attr) 
+       (when v (str "=\"" (as-str v) "\""))
+       "]"))
 
 
-;; TODO - should this be children (plural) friendly?
-(defn- ^:public get-sibling-with-attribute
-  [el attr v]
-  (some-> el
-          (zip-get "^")
-          (qs (str "[" attr "=\"" v "\"]"))))
+(defn ^:public sibling-with-attribute
+  "Returns the first sibling with attribute match"
+  ([el attr]
+   (sibling-with-attribute el attr nil))
+  ([el attr v]
+   (when-let [sib
+              (some-> el
+                      (zip-get "^")
+                      (qs (direct-children-qs-syntax attr v)))]
+     (when-not (= el sib) sib))))
 
 
-;; TODO - should this just toggle with all the siblings? 
-(defn ^:public toggle-boolean-attribute-sibling
-  [el attr]
-  (when-not (some-> el (.getAttribute attr) (= "true"))
-    (some-> el
-            (get-sibling-with-attribute attr "true") 
-            (toggle-boolean-attribute attr))
-    (toggle-boolean-attribute el attr)))
+;; TODO make macros.namespace
+;; finish guide
+;; small test
+;; update changelog
+;; make list of public fns in readme
 
 
-
-(defn ^:public toggle-attribute
-  [node attr a b]
-  (some-> node 
-          (.setAttribute (name attr) 
-                         (if (= (.getAttribute node (name attr))
-                                (str a))
-                           (str b)
-                           (str a)))))
-
-
-
-;; TODO - should this just toggle with all the siblings? 
-(defn ^:public toggle-attribute-sibling
-  [el attr a b]
-  (let [a (str a)
-        b (str b)]
-    (when-not (some-> el (.getAttribute attr) (= a))
-      (some-> el
-              (get-sibling-with-attribute attr a) 
-              (toggle-attribute attr a b))
-      (toggle-attribute el attr a b))))
+(defn ^:public siblings-with-attribute
+  "Returns a vector of siblings with attribute matches."
+  ([el attr]
+   (siblings-with-attribute el attr nil))
+  ([el attr v]
+   (some-> el
+           (zip-get "^")
+           (qsa (direct-children-qs-syntax attr v))
+           (js/Array.from)
+           (.filter #(not (= el %))))))
 
 
+;; BREAKING CHANGE - Removed toggle-boolean-attribute-sibling
+;; BREAKING CHANGE - toggle-attribute-sibling
 
-;;macro?
 (defn ^:public focus! [el] (some-> el .focus))
 
-;;macro?
 (defn ^:public click! [el] (some-> el .click))
 
-;; data-* attribute
-;;macro?
-(defn ^:public data-attr [el nm]
-  (.getAttribute el (str "data-" (name nm))))
+;; BREAKING CHANGE - removed node-is-of-type?
 
-;; node types
-(defn ^:public node-is-of-type? [el s]
-  (boolean (some-> el .-nodeName string/lower-case (= s))))
+(defn ^:public node-name [el]
+  (some-> el .-nodeName string/lower-case))
 
-(defn ^:public el-type [el]
-  (some-> el .-nodeName string/lower-case keyword))
+;;******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;******************************************************************************
+;; Events
+;;******************************************************************************
 
 ;; keypresses
-;;macro?
+;; add to macros?
 (defn ^:public arrow-keycode? [e]
   (< 36 e.keyCode 41))
 
 ;; text input
+;; TODO add checks
+;; add to macros?
 (defn ^:public set-caret! [el i]
   (some-> el (.setSelectionRange i i))
   i)
 
-;;macro?
+;; add to macros?
 (defn ^:public prevent-default! [e] 
   (some-> e .preventDefault))
 
-;;macro?
-(defn ^:public click-xy [e]
-  [e.clientX e.clientY])
+;; add to macros?
+(defn ^:public event-xy 
+  "Returns a js array of x and y coords of event."
+  [e]
+  #js [e.clientX e.clientY])
 
-(defn ^:public event-xy [e]
-  [e.clientX e.clientY])
+;; add to macros?
+(defn ^:public click-xy 
+  "Returns a js-array of x and y coords of click event."
+  [e]
+  (event-xy e))
 
-;;macro?
-(defn ^:public el-from-point [x y]
+;; add to macros?
+(defn ^:public el-from-point 
+  "Expects x and y viewport coordinates and returns the element found at that
+   point."
+  [x y]
   (.elementFromPoint js/document x y))
 
+;; TODO - add check, with warning
 (defn ^:public duration-property-ms 
-  [el property]
-  (let [s      (-> el
-                   (computed-style property)
-                   (string/split #",")
-                   first
-                   string/trim)
-        factor (cond (string/ends-with? s "ms") 1
-                     (string/ends-with? s "s") 1000)
-        ms     (when factor
-                 (js/Math.round (* factor (js/parseFloat s))))]
-    ms))
+  "Given a dom node and a style property, returns the computed style value of
+   that property, in milliseconds.
+   
+   Properties that take a time value:
+   transition-duration
+   transition-delay
+   animation-duration
+   animation-delay
+   animation-iteration-count
+   transition
+   animation"
+  ([el]
+   (duration-property-ms el "transition-duration"))
+  ([el property]
+   (let [s (as-str property)]
+     (when (contains? #{"transition-duration"
+                        "transition-delay"
+                        "animation-duration"
+                        "animation-delay"
+                        "animation-iteration-count"
+                        "transition"
+                        "animation"}
+                      s)
+       (let [s      (-> el
+                        (computed-style-value property)
+                        (string/split #",")
+                        first
+                        string/trim)
+             factor (cond (string/ends-with? s "ms") 1
+                          (string/ends-with? s "s") 1000)
+             ms     (when factor
+                      (js/Math.round (* factor (js/parseFloat s))))]
+         ms)))))
+
 
 (defn ^:public keyboard-event!
   ([nm]
    (keyboard-event! nm nil))
   ([nm opts]
-   (let [nm (name nm)
+   (let [nm (as-str nm)
          opts* #js {"view"       js/window
                     "bubbles"    true
                     "cancelable" true}
@@ -511,6 +922,7 @@
                 (.assign js/Object #js {} opts* opts)
                 opts*)]
      (new js/KeyboardEvent nm opts))))
+
 
 (defn ^:public mouse-event!
   ([nm]
@@ -520,19 +932,25 @@
          opts (if opts
                 (.assign js/Object #js {} opts* opts)
                 opts*)]
-     (new js/MouseEvent (name nm) opts))))
+     (new js/MouseEvent (as-str nm) opts))))
 
+
+;; add to macros?
 (defn ^:public dispatch-event!
   ([el e]
    (some-> el (.dispatchEvent e))))
 
-(defn ^:public add-event-listener! [el nm f opts]
-  (.addEventListener el (name nm) f opts))
 
+;; add to macros?
+(defn ^:public add-event-listener! [el nm f opts]
+  (.addEventListener el (as-str nm) f opts))
+
+;; add to macros?
 (defn ^:public prefers-reduced-motion? []
   (let [mm (.matchMedia js/window "(prefers-reduced-motion: reduce)")]
     (or (true? mm)
         (.-matches mm))))
+
 
 (defn ^:public dispatch-mousedown-event
   ([x y]
@@ -541,21 +959,31 @@
    (js/console.log el)
    (js/console.log (dispatch-event! el (mouse-event! :mousedown {:left x :top y})))))
 
-
+;; add to macros?
 (defn ^:public matches-media?
+  "On a desktop:
+   (matches-media? \"any-hover\" \"hover\") => true
+
+   On a touch device such as a smartphone that does not support hover:
+   (matches-media? \"any-hover\" \"hover\") => false
+   "
   [prop val]
   (when (and prop val)
     (.-matches (js/window.matchMedia (str "(" (as-str prop) ": " (as-str val) ")")))))
+
 
 (defn ^:public media-supports-hover? []
   (boolean (or (matches-media? "any-hover" "hover")
                (matches-media? "hover" "hover"))))
 
+
 (defn ^:public media-supports-touch? []
   (boolean (or (matches-media? "pointer" "none")
                (matches-media? "pointer" "coarse"))))
 
-(defn ^:public mouse-down-a11y
+
+;; Investigate a11y alignment between mousedown and keydown
+(defn ^:public mouse-down-a11y-map
   "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
@@ -588,64 +1016,120 @@
    :on-mouse-down #(when (= 0 (.-button %))
                      (apply f (concat args [%])))})
 
+;; Breaking - returns js object
+(defn ^:public mouse-down-a11y
+  "Sets up a partial attributes js-obj for using `on-mouse-down` instead of `on-click`.
+   Intended for buttons, switches, checkboxes, radios, etc.
 
-(defn ^:public on-key-down-tab-navigation
-  "If arrow keys are pressed when an element is focused, this will properly
-   handle tab navigation. The element which has focus, and all of its siblings
-   elements, must have a `role` of `tab`. All the siblings must be direct
-   children of an element with a `role` of `tablist`. "
-  [e]
-  ;; TODO Add safety checks, with warnings:
-  ;; - every sibling has the `role` of `tab`
-  ;; - parent has the role of `tablist`
-  ;; TODO - what if only other sib is disabled?
-  (let [key (.-key e)] 
-    (when (contains? #{"ArrowRight"
-                       "ArrowLeft"
-                       "ArrowUp"
-                       "ArrowDown"}
-                     key) 
-      (let [el          (et e)
-            next-sib    (next-element-sibling el)
-            prev-sib    (previous-element-sibling el)
-            tablist-el  (nearest-ancestor el "[role='tablist']")
-            orientation (some-> tablist-el
-                                (.getAttribute "aria-orientation"))
-            sib         (if (= orientation "vertical")
-                          (case key
-                            "ArrowUp" (or prev-sib next-sib)
-                            "ArrowDown" (or next-sib prev-sib))
-                          (case key
-                            "ArrowRight" (or next-sib prev-sib)
-                            "ArrowLeft" (or prev-sib next-sib)))]
-        (when sib
-          (.click sib)
-          (.focus sib))))))
+   The function passed in may accept any number of args, but the last arg needs 
+   to be the event.
 
-(defn ^:public hover-class-attrs [s]
-  {:on-mouse-enter #(add-class! (cet %) s)
-   :on-mouse-leave #(remove-class! (cet %) s)})
+   Contrived example with reagent:
 
+  (defn sidenav-item-handler [label modal? e]
+    (domo/scroll-into-view!
+    (domo/qs-data= \"foo-bar\" label))
+    (domo/scroll-by! {:y -50})
+    (when modal?
+      (dismiss-popover! e)))
+   
+  (defn my-reagent-component
+    [{:keys [coll modal?]}]
+    (into [:ul]
+          (for [{:keys [label]} coll]
+            [:li 
+            [button
+              (merge-attrs
+              (sx :.pill
+                  ...)
+              (mouse-down-a11y sidenav-item-handler label modal?))
+              label]])))"
+  [f & args]
+  #js {:onkeydown   #(when (contains? #{" " "Enter"} (.-key %))
+                       (apply f (concat args [%])))
+       :onmousedown #(when (= 0 (.-button %))
+                       (apply f (concat args [%])))})
+
+
+;; Breaking hover-class-attrs -> add-class-on-mouse-enter-attrs
+;; Breaking now returns js-object
+(defn ^:public add-class-on-mouse-enter-attrs 
+  [s]
+  #js {:on-mouse-enter #(.add (.-classList (some-> % .-currentTarget)) (as-str s))
+       :on-mouse-leave #(.remove (.-classList (some-> % .-currentTarget)) (as-str s))})
+
+;; Added
+(defn ^:public add-class-on-mouse-enter-attrs-map
+  [s]
+  {:on-mouse-enter #(.add (.-classList (some-> % .-currentTarget)) (as-str s))
+   :on-mouse-leave #(.remove (.-classList (some-> % .-currentTarget)) (as-str s))})
 
 (defn ^:public raf
   "Sugar for (js/requestAnimationFrame f)"
   [f]
   (js/requestAnimationFrame f))
 
+
 (defn ^:public fade-in 
+  "Orchestrates the fading in of an element."
   ([el]
    (fade-in el nil))
-  ([el {:keys [display-class opacity-class]}]
-   (add-class! el (or display-class "display-block"))
-   (raf #(add-class! el (or opacity-class "opacity-100%")))))
+  ([el {:keys [display opacity duration]}]
+
+   ;; Is this redundant?
+   (set-style! el "display" (or (as-str display) "block"))
+
+   (some-> duration
+           as-str
+           (maybe #(or (pos-int? %) (zero? %)))
+           (str "ms")
+           (->> (set-style! el "transition-duration")))
+
+   ;; Is this redundant?
+   (set-style! el "display" (or (as-str display) "block"))
+
+   (raf #(set-style! el "opacity" (or (as-str opacity) "100%")))))
+
+
+(defn ^:public css-duration-value->int [s]
+  (let [[n unit] (re-find #"([0-9]+\.?[0-9]*)(m?s)$" s)]
+    (when (and n unit)
+      (if (= unit "s")
+        (js/round (* n 1000))
+        n))))
+
 
 (defn ^:public fade-out
+  "Orchestrates the fading out of an element."
   ([el]
    (fade-out el nil))
-  ([el {:keys [display-class opacity-class fade-duration]
-        :or   {fade-duration 250}}]
-   (set-style! el "transition-duration" (str fade-duration "ms"))
-   (remove-class! el (or opacity-class "opacity-100%"))
-   (js/setTimeout #(remove-class! el (or display-class "display-block"))
-                  (or fade-duration 250))
-   ))
+  ([el {:keys [duration           ; <- pos-int
+               ]}]
+   (let [supplied-fade-duration
+         (maybe duration #(or (pos-int? %) (zero? %)))
+         
+         computed-fade-duration
+         (some-> el
+                 (computed-style-value "transition-duration")
+                 css-duration-value->int)
+
+         fade-duration (or supplied-fade-duration computed-fade-duration 250)]
+
+    ;; (? {:supplied-fade-duration supplied-fade-duration
+    ;;     :computed-fade-duration computed-fade-duration
+    ;;     :fade-duration          fade-duration})
+
+    ;; Set fade duration if one is provided, or if no computed-transition-duration is resolved.
+     (some-> (or supplied-fade-duration (when-not computed-fade-duration fade-duration))
+             (str "ms")
+             (->> (set-style! el "transition-duration")))
+     (set-style! el "opacity" "0")
+     (js/setTimeout #(set-style! el "display" "none")
+                    (or fade-duration fade-duration)))))
+
+
+
+
+
+
+

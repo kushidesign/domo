@@ -1,0 +1,20 @@
+{:paths   ["src/dev"
+           "src/main"
+           "src/test"]
+
+ :deps    {binaryage/devtools                   {:mvn/version "1.0.6"}
+           reagent/reagent                      {:mvn/version "1.1.1"}
+           io.github.paintparty/fireworks       {:mvn/version "0.16.0"}
+           io.github.paintparty/bling           {:mvn/version "0.8.8"}
+           design.kushi/domo                    {:mvn/version "0.3.0"}}
+
+ :aliases {:dev       {:extra-deps {thheller/shadow-cljs {:mvn/version "2.26.2"}}}
+
+           ;; you can make local git clones, or use :git/url deps here
+           :local-dev {:override-deps {
+                                      ;;  io.github.paintparty/fireworks {:local/root "../../../../cljc/fireworks"}
+                                      ;;  io.github.paintparty/lasertag  {:local/root "../../../../cljc/lasertag"}
+                                      ;;  design.kushi/domo              {:local/root "../../"}
+                                       }
+                       :extra-deps    {thheller/shadow-cljs {:mvn/version "2.26.2"}}}
+           }}

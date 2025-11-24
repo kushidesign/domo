@@ -18,3 +18,8 @@ pom.xml.asc
 .vscode
 .idea
 kushi.workspace.code-workspace
+node_modules
+.shadow-cljs
+**/public/js/*
+.cpcache
+
