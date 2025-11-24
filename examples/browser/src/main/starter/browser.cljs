@@ -293,7 +293,7 @@
       ;; Uncomment below to run tests, if you are deving on the Domo lib.
       ;; Note that if you change the contents of the reagent-render function,
       ;; the tests might fail.
-      (run-tests!)
+      #_(run-tests!)
       )
 
     :component-did-update
