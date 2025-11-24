@@ -42,15 +42,15 @@
 (defn ^:public copy-to-clipboard!
   ([s]
    (copy-to-clipboard! js/document.body s))
-  ([node s]
-   (when node 
-     (let [el (js/document.createElement "textarea")]
-       (set! (.-value el) s)
-       (.setAttribute el "class" "offscreen")
-       (.appendChild node el)
-       (.select el)
+  ([el s]
+   (when el 
+     (let [ta (js/document.createElement "textarea")]
+       (set! (.-value ta) s)
+       (.setAttribute ta "class" "offscreen")
+       (.appendChild el ta)
+       (.select ta)
        (js/document.execCommand "copy")
-       (.removeChild node el)))))
+       (.removeChild el ta)))))
 
 ;;******************************************************************************
 
@@ -183,8 +183,8 @@
    which contains the center of the node.
 
    (screen-quadrant (domo.core/el-by-id \"my-id\")) => [:top :left]"
-  [node]
-  (let [{:keys [x-fraction y-fraction]} (client-rect node)]
+  [el]
+  (let [{:keys [x-fraction y-fraction]} (client-rect el)]
     (screen-quadrant* x-fraction y-fraction)))
 
 
@@ -279,15 +279,15 @@
 ;; Nodes
 ;;******************************************************************************
 
-(defn ^:public parent [node] (some-> node .-parentNode))
+(defn ^:public parent [el] (some-> el .-parentNode))
 
 ;; ;; BREAKING next-element-sibling -> next-sibling
-(defn ^:public next-sibling [node] (some-> node .-nextElementSibling))
+(defn ^:public next-sibling [el] (some-> el .-nextElementSibling))
 
 ;; ;; BREAKING previous-element-sibling -> previous-sibling
-(defn ^:public previous-sibling [node] (some-> node .-previousElementSibling))
+(defn ^:public previous-sibling [el] (some-> el .-previousElementSibling))
 
-(defn ^:public grandparent [node] (some-> node .-parentNode .-parentNode))
+(defn ^:public grandparent [el] (some-> el .-parentNode .-parentNode))
 
 
 ;; TODO - test these with reagent
@@ -419,12 +419,12 @@
 
 
 (defn ^:public toggle-boolean-attribute!
-  [node attr]
-  (let [attr-val (.getAttribute node (as-str attr))
+  [el attr]
+  (let [attr-val (.getAttribute el (as-str attr))
         newv (if (contains? #{"false" nil} attr-val)
                true
                false)]
-    (.setAttribute node (as-str attr) newv)))
+    (.setAttribute el (as-str attr) newv)))
 
 
 ;; BREAKING CHANGE - toggle-attribute -> toggle-attribute!
@@ -440,12 +440,12 @@
    
    mutates the dome to:
    <div data-foo=\"bar\">"
-  [node attr a b]
+  [el attr a b]
   (let [attr (as-str attr)]
-    (when-let [current-value (-> node (.getAttribute attr))]
+    (when-let [current-value (-> el (.getAttribute attr))]
       (let [a (as-str a)
             b (as-str b)]
-        (-> node 
+        (-> el 
             (.setAttribute attr 
                            (if (= current-value a) b a)))))))
 
