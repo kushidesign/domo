@@ -1,8 +1,7 @@
 (ns domo.core
   (:require [applied-science.js-interop :as j]
-            [fireworks.core :refer [? !? ?> !?>]]
+            ;; [fireworks.core :refer [? !? ?> !?>]]
             [clojure.string :as string]))
-
 
 (defn maybe [x pred]
   (when (if (set? pred)
@@ -11,7 +10,8 @@
     x))
 
 
-(defn ^:public as-str [x]
+(defn as-str {:public true :domo/category "Utilities"}
+  [x]
   (str (cond
          (string? x)
          x
@@ -23,13 +23,18 @@
          x)))
 
 
-(defn ^:public round-by-dpr [n]
+(defn round-by-dpr {:public true :domo/category "Utilities"}
+  [n]
   (let [dpr (or js/window.devicePixelRatio 1)
         ret (/ (js/Math.round (* dpr n)) dpr)]
     ret))
 
 
-(defn ^:public css-style-string [m]
+(defn css-style-string 
+  {:public true
+   :domo/tags [:styles]
+   :category "CSS & Styling"}
+  [m]
   (string/join ";"
                (map (fn [[k v]]
                       (str (as-str k)
@@ -37,9 +42,12 @@
                            (if (number? v) (str v) (as-str v))))
                     m)))
 
-;; Culled from:
+;; Inspiration from:
 ;; https://gist.github.com/rotaliator/73daca2dc93c586122a0da57189ece13
-(defn ^:public copy-to-clipboard!
+(defn copy-to-clipboard!
+  {:public        true
+   :domo/tags     [:utilities]
+   :domo/category "Utilities"}
   ([s]
    (copy-to-clipboard! js/document.body s))
   ([el s]
@@ -71,8 +79,7 @@
 ;; Nodes
 ;;******************************************************************************
 
-;; Breaking - returns js object
-(defn ^:public viewport
+(defn viewport
   "Returns a js object describing the viewport inner-width and inner-height.
 
    Example:
@@ -82,13 +89,16 @@
     inner-height-without-scrollbars: 1246
     inner-width-without-scrollbars:  275
     inner-height:                    1246}"
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   []
   #js {:inner-height                    js/window.innerHeight
        :inner-width                     js/window.innerWidth
        :inner-height-without-scrollbars js/window.innerHeight 
        :inner-width-without-scrollbars  js/document.documentElement.clientWidth})
 
-(defn ^:public viewport-map
+(defn viewport-map
   "Returns a cljs hashmap describing the viewport inner-width and inner-height.
 
    Example:
@@ -98,6 +108,9 @@
     :inner-height-without-scrollbars 1246
     :inner-width-without-scrollbars  275
     :inner-height                    1246}"
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   []
   {:inner-height                    js/window.innerHeight
    :inner-width                     js/window.innerWidth
@@ -105,20 +118,24 @@
    :inner-width-without-scrollbars  js/document.documentElement.clientWidth})
 
 
-;; BREAkKING! order of args swapped
-(defn ^:public viewport-x-fraction 
+(defn viewport-x-fraction
   "First argument must be a viewport js object produced from domo.core/viewport.
    Second argument must be a number representing an x coordinate. Returns the
-   position as a fraction of the viewport width."
+   position as a fraction of the viewport width." 
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [vp x]
   (/ x (j/get vp :inner-width-without-scrollbars)))
 
 
-;; BREAkKING! order of args swapped
-(defn ^:public viewport-y-fraction
+(defn viewport-y-fraction
   "First argument must be a viewport js object produced from domo.core/viewport.
    Second argument must be a number representing an y coordinate. Returns the
    position as a fraction of the viewport height."
+  {:public    true
+   :domo/tags [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [vp y]
   (/ y (j/get vp :inner-height-without-scrollbars)))
 
@@ -142,22 +159,27 @@
        :y-fraction (viewport-y-fraction vp y)
        :vp         (if (= k :js) vp (js->clj vp :keywordize-keys true))))))
 
-;; Breaking - returns js object
-(defn ^:public client-rect 
+
+(defn client-rect
   "Given an dom node, returns a js-object describing the element's geometry
-   relative to the viewport."
+   relative to the viewport." 
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [el]
   (client-rect* el :js))
 
-;; Added
-(defn ^:public client-rect-map 
+
+(defn client-rect-map
   "Given an dom node, returns a cljs map describing the element's geometry
-   relative to the viewport."
+   relative to the viewport." 
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [el]
   (client-rect* el :cljs))
 
 
-;; Added
 (defn- screen-quadrant* [x-fraction y-fraction]
   (let [left? (> 0.5 x-fraction)
         top?  (> 0.5 y-fraction)]
@@ -165,35 +187,45 @@
          :x (if left? :left :right)}))
 
 
-;; Breaking! Now returns js-object instead of tuple? e.g {:x :left :y :top}
-(defn ^:public screen-quadrant-from-point
+(defn screen-quadrant-from-point
   "Given an x and y value, returns a tuple back representing the viewport
    quadrant which contains the point.
 
    (screen-quadrant 10 20) => [:top :left]"
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [x y]
   (let [vp (viewport)]
     (screen-quadrant* (viewport-x-fraction vp x)
                       (viewport-y-fraction vp y))))
 
 
-;; Breaking! Now returns js-object instead of tuple? e.g {:x :left :y :top}
-(defn ^:public screen-quadrant
+(defn screen-quadrant
   "Given a dom node, returns a tuple representing the viewport quadrant which
    which contains the center of the node.
 
    (screen-quadrant (domo.core/el-by-id \"my-id\")) => [:top :left]"
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [el]
   (let [{:keys [x-fraction y-fraction]} (client-rect el)]
     (screen-quadrant* x-fraction y-fraction)))
 
 
-(defn ^:public distance-between-points [x1 y1 x2 y2]
+(defn distance-between-points [x1 y1 x2 y2]
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   (js/Math.sqrt (+ (js/Math.pow (- x2 x1) 2)
                    (js/Math.pow (- y2 y1) 2))))
 
-(defn ^:public intersecting-client-rects?
+
+(defn intersecting-client-rects?
   "Expects two js objects representing client-rect instances."
+  {:public true :domo/tags [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
   [a b]
   (not (or (<= (+ (.-left a) (.-width a)) (.-left b))
            (<= (+ (.-left b) (.-width b)) (.-left a))
@@ -201,7 +233,11 @@
            (<= (+ (.-top b) (.-height b)) (.-top a)))))
 
 
-(defn ^:public distance-between-els [a b]
+(defn distance-between-els
+  {:public        true
+   :domo/tags     [:viewport :geometry]
+   :domo/category "Viewport & Geometry"}
+  [a b]
   (j/let [^:js {a-left   :left
                 a-right  :right
                 a-width  :width
@@ -279,98 +315,86 @@
 ;; Nodes
 ;;******************************************************************************
 
-(defn ^:public parent [el] (some-> el .-parentNode))
+(defn parent {:public true :domo/category "Node Selection"} [el] (some-> el .-parentNode))
 
-;; ;; BREAKING next-element-sibling -> next-sibling
-(defn ^:public next-sibling [el] (some-> el .-nextElementSibling))
+(defn next-sibling {:public true :domo/category "Node Selection"} [el] (some-> el .-nextElementSibling))
 
-;; ;; BREAKING previous-element-sibling -> previous-sibling
-(defn ^:public previous-sibling [el] (some-> el .-previousElementSibling))
+(defn previous-sibling {:public true :domo/category "Node Selection"} [el] (some-> el .-previousElementSibling))
 
-(defn ^:public grandparent [el] (some-> el .-parentNode .-parentNode))
+(defn grandparent {:public true :domo/category "Node Selection"} [el] (some-> el .-parentNode .-parentNode))
 
 
-;; TODO - test these with reagent
-(defn ^:public current-event-target [e] (some-> e .-currentTarget))
+(defn current-event-target {:public true :domo/category "Events"} [e] (some-> e .-currentTarget))
 (def ^:public cet current-event-target)
 
-;; ;; Added
-(defn ^:public current-event-target-value [e] (some-> e .-currentTarget .-value))
+(defn current-event-target-value {:public true :domo/category "Events"} [e] (some-> e .-currentTarget .-value))
 (def ^:public cetv current-event-target-value)
 
-;; ;; Added
-(defn ^:public event-target [e] (some-> e .-target))
+(defn event-target {:public true :domo/category "Events"} [e] (some-> e .-target))
 (def ^:public et event-target)
 
-;; ;; Added/
-(defn ^:public event-target-value [e] (some-> e .-target .-value))
+(defn event-target-value {:public true :domo/category "Events"} [e] (some-> e .-target .-value))
 (def ^:public etv event-target-value)
 
-;; ;; Added
-(defn ^:public event-target-value->int [e] (some-> e .-target .-value js/parseInt))
+(defn event-target-value->int {:public true :domo/category "Events"} [e] (some-> e .-target .-value js/parseInt))
 (def ^:public etv->int event-target-value->int)
 
-;; ;; Added
-(defn ^:public event-target-value->float [e] (some-> e .-target .-value js/parseFloat))
+(defn event-target-value->float {:public true :domo/category "Events"} [e] (some-> e .-target .-value js/parseFloat))
 (def ^:public etv->float event-target-value->float)
 
-;; ;; Added
-(defn ^:public element-node?
+(defn element-node? 
   "If supplied value is a dom element such as <div>, <span>, etc., returns true,
    else returns false."
+  {:public true :domo/category "Events"}
   [el]
   (boolean (some-> el .-nodeType (= 1))))
 
-(defn ^:public el-by-id [id]
+(defn el-by-id {:public true :domo/category "Events"} [id]
   (js/document.getElementById id))
 
-(defn ^:public get-first-onscreen-child-from-top
+(defn get-first-onscreen-child-from-top {:public true :domo/category "Events"}
   [el]
   (.find (js/Array.from el.childNodes)
          #(when (element-node? %)
             (-> % .getBoundingClientRect .-top pos?))))
 
-;; ;; TODO - add checks
-(defn ^:public nearest-ancestor
+(defn nearest-ancestor {:public true :domo/category "Events"}
   [el sel]
-   (when sel (some-> el (.closest sel))))
+  (when sel (some-> el (.closest sel))))
 
 
-(defn ^:public class-string
-  "Returns the element's class value as a string"
+(defn class-string "Returns the element's class value as a string"
+  {:public true :domo/category "CSS & Styling"}
   [el]
   (.getAttribute el "class"))
 
-(defn ^:public class-list
-  "Returns the element's classList, which is a DOMTokenList"
+(defn class-list "Returns the element's classList, which is a DOMTokenList"
+  {:public true :domo/category "CSS & Styling"}
   [el]
   (.-classList el))
 
-(defn ^:public toggle-class!
+(defn toggle-class! {:public true :domo/category "CSS & Styling"}
   [el & xs]
   (doseq [x xs] (.toggle (.-classList el) (as-str x))))
 
-(defn ^:public remove-class!
+(defn remove-class! {:public true :domo/category "CSS & Styling"}
   [el & xs]
   (doseq [x xs] (.remove (.-classList el) (as-str x))))
 
-(defn ^:public add-class!
+(defn add-class! {:public true :domo/category "CSS & Styling"}
   [el & xs]
   (doseq [x xs] (.add (.-classList el) (as-str x))))
 
-;; BREAKING has-class -> has-class? 
-(defn ^:public has-class?
+(defn has-class? {:public true :domo/category "CSS & Styling"}
   [el classname]
   (some-> el .-classList (.contains (as-str classname))))
 
-;; BREAKING removed set-css-var!
-;; BREAKING removed set-client-wh-css-vars!
-;; BREAKING removed set-neg-client-wh-css-vars!
-
-(defn ^:public object-assign [& objs]
+(defn object-assign {:public true :domo/category "Utilities"}
+  [& objs]
   (js/Object.assign.apply nil (into-array objs)))
 
-(defn ^:public array-from [iterable]
+(defn array-from {:public true :domo/category "Utilities"}
+  [iterable]
   (js/Array.from iterable))
 
 ;;******************************************************************************
@@ -392,43 +416,54 @@
 ;; Attributes
 ;;******************************************************************************
 
-(defn ^:public data-attr [el nm]
+(defn data-attr 
+  {:public true :domo/category "Attributes"} [el nm]
   (.getAttribute el (str "data-" (as-str nm))))
 
 
-(defn ^:public attribute-true? [el attr]
+(defn attribute-true? 
+  {:public true :domo/category "Attributes"} [el attr]
   (when el (= "true" (.getAttribute el (as-str attr)))))
 
 
-(defn ^:public attribute-false? [el attr] 
+(defn attribute-false? 
+  {:public true :domo/category "Attributes"} [el attr] 
   (when el (= "false" (.getAttribute el (as-str attr)))))
 
 
-(defn ^:public has-attribute? [el attr] 
+(defn has-attribute? 
+  {:public true :domo/category "Attributes"} [el attr] 
   (boolean (some-> el (.getAttribute (as-str attr)))))
 
 
-(defn ^:public set-attribute!
+(defn set-attribute! 
+  {:public true :domo/category "Attributes"}
   [el attr v]
   (when el (.setAttribute el (as-str attr) v)))
 
 
-(defn ^:public remove-attribute!
+(defn remove-attribute! 
+  {:public true :domo/category "Attributes"}
   [el attr]
   (when el (.removeAttribute el (as-str attr))))
 
 
-(defn ^:public toggle-boolean-attribute!
+(defn toggle-boolean-attribute! 
+  {:public true :domo/category "Attributes"}
   [el attr]
   (let [attr-val (.getAttribute el (as-str attr))
         newv (if (contains? #{"false" nil} attr-val)
                true
                false)]
-    (.setAttribute el (as-str attr) newv)))
+    (when (contains? #{"false" "true"} attr-val)
+      (.setAttribute el
+                     (as-str attr)
+                     (if (= "false" attr-val)
+                       "true"
+                       "false")))))
 
 
-;; BREAKING CHANGE - toggle-attribute -> toggle-attribute!
-(defn ^:public toggle-attribute!
+(defn toggle-attribute!
   "Toggles an attribute between provided values a and b, depending on the
    current value of the attribute.
    
@@ -440,6 +475,7 @@
    
    mutates the dome to:
    <div data-foo=\"bar\">"
+  {:public true :domo/category "Attributes"}
   [el attr a b]
   (let [attr (as-str attr)]
     (when-let [current-value (-> el (.getAttribute attr))]
@@ -454,30 +490,18 @@
   [el prop s]
   (when el (.setProperty el.style (as-str prop) s)))
 
-;; BREAKING - no coll for el, added 1-arity for map
-(defn ^:public set-style!
+
+(defn set-style!
+  {:public true :domo/category "CSS & Styling"}
   ([el m] 
    (when (map? m) (.setAttribute el "style" (css-style-string m))))
   ([el prop s] 
    (set-style!* el prop s)))
 
-;; TODO - Add merge-style!
 
-
-
-;; REMOVED set-property!
-
-
-;; BREAKING - removed set! , shadowed set!
-
-
-;; BREAKING - removed matches-or-has-nearest-ancestor?
-;; TODO - Add checks
-
-
-;; BREAKING - el-idx -> el-index
-(defn ^:public el-index
+(defn el-index
   "Get index of element, relative to its parent"
+  {:public true :domo/category "Node Selection"}
   [el]
   (when-let [parent (some-> el .-parentNode)]
     (let [children-array (.from js/Array (.-children parent))]
@@ -505,8 +529,8 @@
 ;; Scrolling
 ;;******************************************************************************
 
-;; TODO - Add tests
-(defn ^:public observe-intersection
+(defn observe-intersection 
+  {:public true :domo/category "Events"}
   [{:keys [element
            intersecting
            not-intersecting
@@ -529,8 +553,8 @@
         (.observe observer element)))))
 
 
-;; TODO - Add tests 
-(defn ^:public scroll-by!
+(defn scroll-by! 
+  {:public true :domo/category "Events"}
   [{:keys [x y behavior]
     :or   {x        0
            y        0
@@ -543,9 +567,8 @@
       {"top" y "left" x "behavior" behavior})))
 
 
-;; TODO - Add tests 
-;; Add checks for values
-(defn ^:public scroll-into-view!
+(defn scroll-into-view!
+  {:public true :domo/category "Events"}
   ([el]
    (scroll-into-view! el {}))
   ([el {:keys [inline block behavior]
@@ -556,27 +579,24 @@
      (j/call el :scrollIntoView (clj->js opts)))))
 
 
-(defn ^:public scroll-to-top! [] (js/window.scrollTo 0 0))
+(defn scroll-to-top! {:public true :domo/category "Events"} [] (js/window.scrollTo 0 0))
 
 
 ;; Figure out best heuristic here .-dir vs .-direction vs `writing-mode`(css)
-(defn ^:public writing-direction
+(defn writing-direction 
+  {:public true :domo/category "CSS & Styling"}
   []
   (.-direction (js/window.getComputedStyle js/document.documentElement)))
 
 
-;; BREAKING CHANGE - removed as-css-custom-property name
-
-
-
-;; Added this
 (defn- valid-css-custom-property-name [v]
   (cond (and (string? v) (string/starts-with? v "--"))
         v
         (and (keyword? v) (string/starts-with? (name v) "--"))
         (name v)))
 
-;; Added this
+
+
 (defn- value-data [s]
   (let [ret {:string s}
         m   (when-let [matches 
@@ -589,11 +609,10 @@
                                (some-> value js/parseInt))]
                 {:unitless-value value
                  :units          (nth matches 3 nil)}))]
-    (merge ret m))
-  )
+    (merge ret m)))
 
-;; BREAKING CHANGE :value to :unitless-value
-(defn ^:public css-custom-property-value-data
+
+(defn css-custom-property-value-data 
   "Gets computed style for css custom property.
    First checks for the computed style on the element, if supplied.
    If element is not supplied, checks for the computed style on the root html.
@@ -606,7 +625,7 @@
    If the css-custom-property is not set, returns empty string:
    (css-custom-property-value-data my-el \"--szzz\") =>
    {:string \"\"}"
-
+  {:public true :domo/category "CSS & Styling"}
   ([nm]
    (css-custom-property-value-data nil nm))
   ([el nm]
@@ -617,12 +636,13 @@
              value-data))))
 
 
-;; BREAKING CHANGE - stricter input
-(defn ^:public css-custom-property-value
+
+(defn css-custom-property-value
   "Gets computed style for css custom property.
    First checks for the computed style on the element, if supplied.
    If element is not supplied, checks for the computed style on the root html.
    Returns a string."
+  {:public true :domo/category "CSS & Styling"}
   ([nm]
    (css-custom-property-value nil nm))
   ([el nm]
@@ -652,6 +672,7 @@
    (token->ms :--xxfast)    ; => 100
    (token->ms 42)           ; => nil
    "
+  {:public true :domo/category "CSS & Styling"}
   ([x]
    (token->ms js/document.documentElement
               x))
@@ -667,17 +688,16 @@
          ret)))))
 
 
-;; BREAKING CHANGE - computed-style -> computed-style-value
-(defn ^:public computed-style-value
+(defn computed-style-value 
+  {:public true :domo/category "CSS & Styling"}
   ([nm]
    (computed-style-value js/document.documentElement nm))
   ([el nm]
    (some-> el js/window.getComputedStyle (j/get nm))))
 
 
-
-;; ADDED this
-(defn ^:public computed-style-value-data
+(defn computed-style-value-data 
+  {:public true :domo/category "CSS & Styling"}
   ([nm]
    (computed-style-value-data js/document.documentElement nm))
   ([el nm]
@@ -687,7 +707,9 @@
            value-data)))
 
 
-(defn ^:public dev-only [x]
+(defn dev-only 
+  {:public true :domo/category "Utilities"}
+  [x]
   (when ^boolean js/goog.DEBUG x))
 
 
@@ -707,7 +729,7 @@
    })
 
 
-(defn ^:public zip-get
+(defn zip-get 
   "Zipper-esque navigation for the DOM.
    
    The following 4 calls are equivalent:
@@ -725,6 +747,7 @@
    (zip-get el [:down :right :right])
 
    (zip-get el '[down right right])"
+  {:public true :domo/category "Node Selection"}
   [el steps]
   (reduce (fn [el x]
             (let [k (get zip-nav (as-str x) x)]
@@ -737,36 +760,43 @@
             steps)))
 
 
-(defn ^:public data-selector= 
-  "(data-selector= :foo :bar) => \"[data-foo=\\\"bar\\\"]\""
-  [attr v]
-  (str "[data-" (as-str attr) "=\"" (as-str v) "\"]"))
+(defn data-selector
+  "(data-selector :foo :bar) => \"[data-foo=\\\"bar\\\"]\"" 
+  {:public true :domo/category "Node Selection"}
+  ([attr]
+   (str "[data-" (as-str attr) "]"))
+  ([attr v]
+   (str "[data-" (as-str attr) "=\"" (as-str v) "\"]")))
 
 
-(defn ^:public value-selector=
-  "(value-selector= :baz) => \"[value=\\\"baz\\\"]\""
+(defn value-selector 
+  "(value-selector :baz) => \"[value=\\\"baz\\\"]\""
+  {:public true :domo/category "Node Selection"}
   [v]
   (str "[value=\"" (as-str v) "\"]"))
 
 
- (defn ^:public qs 
+ (defn qs 
+   {:public true :domo/category "Node Selection"} 
    ([s]
     (qs js/document s))
    ([el s]
     (.querySelector el s)))
 
-(defn ^:public qsa
+(defn qsa 
+  {:public true :domo/category "Node Selection"}
   ([s]
    (qsa js/document s))
   ([el s]
    (.querySelectorAll el s)))
 
 
-(defn ^:public qs-data=
+(defn qs-data 
+  {:public true :domo/category "Node Selection"}
   ([attr v]
-   (qs-data= js/document (as-str attr) (as-str v)))
+   (qs-data js/document (as-str attr) (as-str v)))
   ([el attr v]
-   (some-> el (.querySelector (data-selector= (as-str attr) (as-str v))))))
+   (some-> el (.querySelector (data-selector (as-str attr) (as-str v))))))
 
 
 (defn- direct-children-qs-syntax [attr v]
@@ -776,8 +806,9 @@
        "]"))
 
 
-(defn ^:public sibling-with-attribute
+(defn sibling-with-attribute 
   "Returns the first sibling with attribute match"
+  {:public true :domo/category "Node Selection"}
   ([el attr]
    (sibling-with-attribute el attr nil))
   ([el attr v]
@@ -788,15 +819,9 @@
      (when-not (= el sib) sib))))
 
 
-;; TODO make macros.namespace
-;; finish guide
-;; small test
-;; update changelog
-;; make list of public fns in readme
-
-
-(defn ^:public siblings-with-attribute
+(defn siblings-with-attribute
   "Returns a vector of siblings with attribute matches."
+  {:public true :domo/category "Node Selection"}
   ([el attr]
    (siblings-with-attribute el attr nil))
   ([el attr v]
@@ -807,17 +832,22 @@
            (.filter #(not (= el %))))))
 
 
-;; BREAKING CHANGE - Removed toggle-boolean-attribute-sibling
-;; BREAKING CHANGE - toggle-attribute-sibling
+(defn focus!
+  {:public true :domo/category "Events"} 
+  [el]
+  (some-> el .focus))
 
-(defn ^:public focus! [el] (some-> el .focus))
 
-(defn ^:public click! [el] (some-> el .click))
+(defn click!
+  {:public true :domo/category "Events"}
+  [el]
+  (some-> el .click))
 
-;; BREAKING CHANGE - removed node-is-of-type?
 
-(defn ^:public node-name [el]
-  (some-> el .-nodeName string/lower-case))
+(defn node-name 
+  {:public true :domo/category "Utilities"} 
+  [el]
+  (some-> el .-nodeName))
 
 ;;******************************************************************************
 
@@ -838,43 +868,49 @@
 ;; Events
 ;;******************************************************************************
 
-;; keypresses
-;; add to macros?
-(defn ^:public arrow-keycode? [e]
+
+(defn arrow-keycode? 
+  {:public true :domo/category "Events"}
+  [e]
   (< 36 e.keyCode 41))
 
-;; text input
-;; TODO add checks
-;; add to macros?
-(defn ^:public set-caret! [el i]
+
+(defn set-caret! 
+  {:public true :domo/category "CSS & Styling"}
+  [el i]
   (some-> el (.setSelectionRange i i))
   i)
 
-;; add to macros?
-(defn ^:public prevent-default! [e] 
+
+(defn prevent-default!
+  {:public true :domo/category "Events"}
+  [e] 
   (some-> e .preventDefault))
 
-;; add to macros?
-(defn ^:public event-xy 
-  "Returns a js array of x and y coords of event."
+
+(defn event-xy 
+  "Returns a js array of x and y coords of event." 
+  {:public true :domo/category "Events"}
   [e]
   #js [e.clientX e.clientY])
 
-;; add to macros?
-(defn ^:public click-xy 
-  "Returns a js-array of x and y coords of click event."
+
+(defn click-xy 
+  "Returns a js-array of x and y coords of click event." 
+  {:public true :domo/category "Events"}
   [e]
   (event-xy e))
 
-;; add to macros?
-(defn ^:public el-from-point 
+
+(defn el-from-point
   "Expects x and y viewport coordinates and returns the element found at that
-   point."
+   point." 
+  {:public true :domo/category "Node Selection"}
   [x y]
   (.elementFromPoint js/document x y))
 
-;; TODO - add check, with warning
-(defn ^:public duration-property-ms 
+
+(defn duration-property-ms
   "Given a dom node and a style property, returns the computed style value of
    that property, in milliseconds.
    
@@ -886,6 +922,8 @@
    animation-iteration-count
    transition
    animation"
+
+  {:public true :domo/category "CSS & Styling"}
   ([el]
    (duration-property-ms el "transition-duration"))
   ([el property]
@@ -910,7 +948,8 @@
          ms)))))
 
 
-(defn ^:public keyboard-event!
+(defn keyboard-event! 
+  {:public true :domo/category "Events"}
   ([nm]
    (keyboard-event! nm nil))
   ([nm opts]
@@ -924,7 +963,8 @@
      (new js/KeyboardEvent nm opts))))
 
 
-(defn ^:public mouse-event!
+(defn mouse-event! 
+  {:public true :domo/category "Events"}
   ([nm]
    (mouse-event! nm nil))
   ([nm opts]
@@ -935,55 +975,62 @@
      (new js/MouseEvent (as-str nm) opts))))
 
 
-;; add to macros?
-(defn ^:public dispatch-event!
+(defn dispatch-event! 
+  {:public true :domo/category "Events"}
   ([el e]
    (some-> el (.dispatchEvent e))))
 
 
-;; add to macros?
-(defn ^:public add-event-listener! [el nm f opts]
+(defn add-event-listener! 
+  {:public true :domo/category "Events"}
+  [el nm f opts]
   (.addEventListener el (as-str nm) f opts))
 
-;; add to macros?
-(defn ^:public prefers-reduced-motion? []
+
+(defn prefers-reduced-motion? 
+  {:public true :domo/category "CSS & Styling"}
+  []
   (let [mm (.matchMedia js/window "(prefers-reduced-motion: reduce)")]
     (or (true? mm)
         (.-matches mm))))
 
 
-(defn ^:public dispatch-mousedown-event
+(defn dispatch-mousedown-event 
+  {:public true :domo/category "Events"}
   ([x y]
    (dispatch-mousedown-event js/document.body x y))
   ([el x y]
    (js/console.log el)
    (js/console.log (dispatch-event! el (mouse-event! :mousedown {:left x :top y})))))
 
-;; add to macros?
-(defn ^:public matches-media?
+
+(defn matches-media? 
   "On a desktop:
    (matches-media? \"any-hover\" \"hover\") => true
 
    On a touch device such as a smartphone that does not support hover:
-   (matches-media? \"any-hover\" \"hover\") => false
-   "
+   (matches-media? \"any-hover\" \"hover\") => false"
+  {:public true :domo/category "CSS & Styling"}
   [prop val]
   (when (and prop val)
     (.-matches (js/window.matchMedia (str "(" (as-str prop) ": " (as-str val) ")")))))
 
 
-(defn ^:public media-supports-hover? []
+(defn media-supports-hover? 
+  {:public true :domo/category "CSS & Styling"}
+  []
   (boolean (or (matches-media? "any-hover" "hover")
                (matches-media? "hover" "hover"))))
 
 
-(defn ^:public media-supports-touch? []
+(defn media-supports-touch? 
+  {:public true :domo/category "CSS & Styling"}
+  []
   (boolean (or (matches-media? "pointer" "none")
                (matches-media? "pointer" "coarse"))))
 
 
-;; Investigate a11y alignment between mousedown and keydown
-(defn ^:public mouse-down-a11y-map
+(defn mouse-down-a11y-map 
   "Sets up a partial attributes map for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
@@ -1010,15 +1057,15 @@
                   ...)
               (mouse-down-a11y sidenav-item-handler label modal?))
               label]])))"
+  {:public true :domo/category "Events"}
   [f & args]
   {:on-key-down   #(when (contains? #{" " "Enter"} (.-key %))
                      (apply f (concat args [%])))
    :on-mouse-down #(when (= 0 (.-button %))
                      (apply f (concat args [%])))})
 
-;; Breaking - returns js object
-(defn ^:public mouse-down-a11y
-  "Sets up a partial attributes js-obj for using `on-mouse-down` instead of `on-click`.
+
+(defn mouse-down-a11y "Sets up a partial attributes js-obj for using `on-mouse-down` instead of `on-click`.
    Intended for buttons, switches, checkboxes, radios, etc.
 
    The function passed in may accept any number of args, but the last arg needs 
@@ -1044,6 +1091,7 @@
                   ...)
               (mouse-down-a11y sidenav-item-handler label modal?))
               label]])))"
+  {:public true :domo/category "Events"}
   [f & args]
   #js {:onkeydown   #(when (contains? #{" " "Enter"} (.-key %))
                        (apply f (concat args [%])))
@@ -1051,27 +1099,30 @@
                        (apply f (concat args [%])))})
 
 
-;; Breaking hover-class-attrs -> add-class-on-mouse-enter-attrs
-;; Breaking now returns js-object
-(defn ^:public add-class-on-mouse-enter-attrs 
+(defn add-class-on-mouse-enter-attrs 
+  {:public true :domo/category "Events"} 
   [s]
   #js {:on-mouse-enter #(.add (.-classList (some-> % .-currentTarget)) (as-str s))
        :on-mouse-leave #(.remove (.-classList (some-> % .-currentTarget)) (as-str s))})
 
-;; Added
-(defn ^:public add-class-on-mouse-enter-attrs-map
+
+(defn add-class-on-mouse-enter-attrs-map 
+  {:public true :domo/category "Events"}
   [s]
   {:on-mouse-enter #(.add (.-classList (some-> % .-currentTarget)) (as-str s))
    :on-mouse-leave #(.remove (.-classList (some-> % .-currentTarget)) (as-str s))})
 
-(defn ^:public raf
+
+(defn raf
   "Sugar for (js/requestAnimationFrame f)"
+  {:public true :domo/category "Utilities"}
   [f]
   (js/requestAnimationFrame f))
 
 
-(defn ^:public fade-in 
-  "Orchestrates the fading in of an element."
+(defn fade-in 
+  "Orchestrates the fading in of an element." 
+  {:public true :domo/category "CSS & Styling"}
   ([el]
    (fade-in el nil))
   ([el {:keys [display opacity duration]}]
@@ -1091,7 +1142,8 @@
    (raf #(set-style! el "opacity" (or (as-str opacity) "100%")))))
 
 
-(defn ^:public css-duration-value->int [s]
+(defn css-duration-value->int
+  {:public true :domo/category "CSS & Styling"} [s]
   (let [[n unit] (re-find #"([0-9]+\.?[0-9]*)(m?s)$" s)]
     (when (and n unit)
       (if (= unit "s")
@@ -1099,8 +1151,9 @@
         n))))
 
 
-(defn ^:public fade-out
+(defn fade-out 
   "Orchestrates the fading out of an element."
+  {:public true :domo/category "CSS & Styling"}
   ([el]
    (fade-out el nil))
   ([el {:keys [duration           ; <- pos-int
@@ -1115,11 +1168,11 @@
 
          fade-duration (or supplied-fade-duration computed-fade-duration 250)]
 
-    ;; (? {:supplied-fade-duration supplied-fade-duration
-    ;;     :computed-fade-duration computed-fade-duration
-    ;;     :fade-duration          fade-duration})
-
-    ;; Set fade duration if one is provided, or if no computed-transition-duration is resolved.
+     ;; (? {:supplied-fade-duration supplied-fade-duration
+     ;;     :computed-fade-duration computed-fade-duration
+     ;;     :fade-duration          fade-duration})
+     
+     ;; Set fade duration if one is provided, or if no computed-transition-duration is resolved.
      (some-> (or supplied-fade-duration (when-not computed-fade-duration fade-duration))
              (str "ms")
              (->> (set-style! el "transition-duration")))
