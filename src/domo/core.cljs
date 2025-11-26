@@ -1,6 +1,5 @@
 (ns domo.core
   (:require [applied-science.js-interop :as j]
-            ;; [fireworks.core :refer [? !? ?> !?>]]
             [clojure.string :as string]))
 
 (defn maybe [x pred]
