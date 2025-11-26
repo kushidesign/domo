@@ -44,7 +44,7 @@ There are many more -- checkout source of `domo.core` namespace.
 Add as a dependency to your project:
 
 ```clojure
-[design.kushi/domo "0.4.0"]
+[design.kushi/domo "0.5.0"]
 ```
 <br>
 
