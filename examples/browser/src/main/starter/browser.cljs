@@ -1,10 +1,9 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; Domo API Tour.
-;; Uncomment various calls within the domo-examples fn below
-;; Results are printed to the browser dev console.
-;; This should help you get a sense of Domo's API.
-;;
+;; domo API Tour ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                            ;;
+;;  Uncomment various calls within the domo-examples fn below.                ;;
+;;  Results are printed to the browser dev console.                           ;;
+;;  This should help you get a sense of domo's API.                           ;;
+;;                                                                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (ns starter.browser
@@ -283,26 +282,37 @@
     ;; (? (d/distance-between-els el-1 el-3))
     ))
 
+;; End of API Tour
+
+
+
 
 (defn main-view []
 (r/create-class
    {:component-did-mount
-    (fn [this old-argv]
+    (fn [_ _]
 
       (domo-examples)
       
-      ;; Uncomment below to run tests, if you are deving on the Domo lib.
+      ;; Uncomment below to run tests, if you are deving on the domo lib.
       ;; Note that if you change the contents of the reagent-render function,
       ;; the tests might fail.
       #_(run-tests!)
       )
 
-    :component-did-update
-    (fn [this old-argv])
-
     :reagent-render 
     (fn []
-      (!? @S)
+
+      ;; CAUTION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+      ;;                                                                      ;;
+      ;;  All of the API examples in the domo-examples function, as well as   ;;
+      ;;  the tests in starter.browser.tests assume the existence of the      ;;
+      ;;  HTML structure below, so you probably do not want to change the     ;;
+      ;;  structure, or any of the attributes, unless you have a specific     ;;
+      ;;  reason.                                                             ;;
+      ;;                                                                      ;;
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
       [:<>
        [:div {:id       "1"
               :data-bar "ok"

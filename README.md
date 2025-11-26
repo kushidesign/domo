@@ -2,7 +2,7 @@
 
 # domo
 
-A ClojureScript DOM utility lib
+A ClojureScript DOM utility library
 
 <img src="https://img.shields.io/clojars/v/design.kushi/domo.svg?color=0969da&style=flat-square&cacheSeconds=3" alt="Domo Clojars badge"></img>
 
@@ -13,13 +13,13 @@ A ClojureScript DOM utility lib
 Once in a while, you may find yourself needing to interact directly with the
 [DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction).
 
-Domo is a collection of utility functions designed to make this easier.
+domo is a collection of 80+ utility functions designed to make this easier.
 
 It can help with:
  - Avoiding the process of digging through browser API docs
  - Reducing the amount of interop syntax in your cljs source code
 
-It features many useful functions for selecting and manipulating DOM elements. A few highlights:
+It features many useful functions for selecting and manipulating DOM elements, querying the viewport, and dealing with events. A few highlights:
 
 
 ```Clojure
@@ -36,7 +36,12 @@ It features many useful functions for selecting and manipulating DOM elements. A
 (css-custom-property-value el property)
 (computed-style el property)
 ```
-There are many more -- checkout source of `domo.core` namespace. 
+And many more -- check out the API list below, as well as the source of `domo.core` namespace. 
+
+<br>
+
+## Quickstart API Tour
+Clone the repo, cd into the `examples/browser` directory, and follow the instructions [here](https://github.com/kushidesign/domo/tree/main/examples/browser).
 
 <br>
 
@@ -56,7 +61,7 @@ Require:
     [domo.core :as d]))
 ```
 
-Domo bundles the excellent [`js-interop`](https://github.com/applied-science/js-interop),
+domo bundles the excellent [js-interop](https://github.com/applied-science/js-interop),
 so you can also require that if you need it.
 
 ```clojure
@@ -82,8 +87,7 @@ There is a **`domo.macros`** namespace which includes macro counterparts for a s
 <br>
 
 ## API
-API docs coming soon. In the meantime you can checkout all the publick functions in the source `domo.core` namespace. Here is an exhaustive list, with
-function signatures:
+API docs coming soon. In the meantime you can checkout all the public functions in the source `domo.core` namespace. Here is an exhaustive list, with function signatures:
 
 ```Clojure
 ;; Viewport & Geometry

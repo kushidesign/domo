@@ -8,17 +8,17 @@
 ## 0.5.0
 2024-11-25
 
-## Added
+### Added
 - metadata maps to all public fns 
 
-## Changed 
+#### Changed 
 - `data-selector=` -> `data-selector`
 - `value-selector=` -> `value-selector`
 
 ## 0.4.0
 2024-11-24
 
-### Initial alpha release
+#### Initial alpha release
 
 ## 0.1.0
 2024-03-22
