@@ -13,7 +13,7 @@ A ClojureScript DOM utility library
 Once in a while, you may find yourself needing to interact directly with the
 [DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction).
 
-domo is a collection of 80+ utility functions designed to make this easier.
+**domo** is a collection of 80+ utility functions designed to make this easier.
 
 It can help with:
  - Avoiding the process of digging through browser API docs
@@ -61,7 +61,7 @@ Require:
     [domo.core :as d]))
 ```
 
-domo bundles the excellent [js-interop](https://github.com/applied-science/js-interop),
+**domo** bundles the excellent [js-interop](https://github.com/applied-science/js-interop),
 so you can also require that if you need it.
 
 ```clojure
