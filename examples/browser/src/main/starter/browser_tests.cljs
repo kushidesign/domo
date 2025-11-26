@@ -1,5 +1,7 @@
 (ns starter.browser-tests
   (:require [domo.core :as d]
+            ;; [fireworks.core :refer [? !? ?> !?>]]
+            [clojure.string :as string]
             [reagent.core :as r]
             [bling.core :as bling]
             [bling.hifi :as hifi])
@@ -39,3 +41,52 @@
                        (hifi/hifi (dissoc m :f)) )
         (println "\n\n")))))
      
+
+;; Call this from starter.browser/main-view
+;; (? (browser-tests/list-of-public-domo-fns-by-category-in-markdown))
+(defn list-of-public-domo-fns-by-category-in-markdown
+  "Returns list of public fns in domo.core, for codeblock in readme.md"
+  []
+  (let [order
+        ["Viewport & Geometry"
+         "Node Selection"
+         "Events"
+         "CSS & Styling"
+         "Utilities"]
+        
+        domo-fns-by-category                   
+        (select-keys
+         (->> (ns-publics 'domo.core)
+              (group-by #(some-> % second meta :domo/category)))
+         order)
+
+        ret 
+        (reduce-kv
+         (fn [s k vc]
+           (str s
+                "\n;; " k "\n\n"
+                (string/join 
+                 "\n"
+                 (sort 
+                  (reduce 
+                   (fn [vc [k v]]
+                     (conj vc
+                           (let [arglists (some-> v meta :arglists)]
+                             (when (= (str k) "copy-to-clipboard!")
+                               (println k arglists))
+                             (str k
+                                  " "
+                                  (into [] 
+                                        (if (< 1 (count arglists))
+                                          ['var_args]
+                                          (let [fa (first arglists)]
+                                            (if (map? (first fa))
+                                              ['opts]
+                                              fa))))))))
+                   []
+                   vc)))
+                "\n\n"))
+
+         ""
+         domo-fns-by-category)]
+    ret))

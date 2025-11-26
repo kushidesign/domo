@@ -1,11 +1,22 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Domo API Tour.
+;; Uncomment various calls within the domo-examples fn below
+;; Results are printed to the browser dev console.
+;; This should help you get a sense of Domo's API.
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (ns starter.browser
-  (:require [starter.browser-tests :refer [run-tests! S]]
+  (:require [starter.browser-tests :as browser-tests :refer [run-tests! S]]
+            [clojure.repl]
             [domo.core :as d]
+            [clojure.string :as string]
             [domo.macros :as dm]               ; <- some of the fns in domo.core have macro versions for perf
             [applied-science.js-interop :as j] ; <- Bundled with domo
             [reagent.core :as r]
             [reagent.dom :as rdom]
-            [fireworks.core :refer [? !? ?> !?>]]))
+            [fireworks.core :refer [? !?]]))
 
 ;; We are overriding some of the default configs for fireworks printing.
 ;; You normally would not do this, but we will be priting things out to the 
@@ -17,7 +28,6 @@
   :label-length-limit    100})
 
 
-
 (defn domo-event-examples [e]
   (? (d/event-target-value e))
   (? (d/event-target-value->int e))
@@ -26,15 +36,6 @@
   (? (d/current-event-target e))
   (? (d/event-target-value->float e)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; Domo API Tour.
-;; Uncomment various calls within the domo-examples fn below
-;; Results are printed to the browser dev console.
-;; This should help you get a sense of Domo's API.
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- domo-examples []
   (let [c      "red"
@@ -52,13 +53,13 @@
     (comment "Map of event-handlers")
     ;; (? (d/mouse-down-a11y (fn [s] (js/console.log s)) "hi"))
     ;; (? (d/mouse-down-a11y-map (fn [s] (js/console.log s)) "hi"))
-
+    
 
     (comment "Simulated events")
     ;; (d/click! gc)
     ;; (js/console.clear)
     ;; (dm/click! gc)
-
+    
 
     (comment "viewport")
     ;; (? (-> (? (d/viewport)) (d/viewport-y-fraction 300)))
@@ -74,7 +75,7 @@
     ;; (? (d/grandparent gc))
     ;; (? (d/element-node? gc))
     ;; (? (d/el-index el-3))
-
+    
     (comment "node info")
     ;; (? (d/node-name gc))
     ;; (? (dm/node-name gc))
@@ -89,11 +90,12 @@
     ;; (? (d/nearest-ancestor el-1 "#app"))
     
     (comment "qs syntax helpers")
-    ;; (? (d/data-selector= :foo :bar))
-    ;; (? (d/value-selector= :baz))
+    ;; (? (d/data-selector :foo :bar))
+    ;; (? (d/data-selector :foo))
+    ;; (? (d/value-selector :baz))
     
     (comment "Various selectors")
-    ;; (? (d/qs-data= :foo :baz))
+    ;; (? (d/qs-data :foo :baz))
     ;; (? (d/qs ".grandchild"))
     ;; (? (d/qs app-el "[data-foo=two]" ))
     
@@ -104,11 +106,9 @@
     ;; (? (d/sibling-with-attribute el-3 :data-foo))
     
     (comment "Multiple siblings selector, single-arity version, Should be a vector of 1 div")
-    ;; (? :log
-    ;;    {:format-label-as-code? true}
-    ;;    (d/siblings-with-attribute el-3 :data-bar :ok))
-
-    (comment "zip-get examples")
+    ;; (? :log {:format-label-as-code? true} (d/siblings-with-attribute el-3 :data-bar :ok))
+    
+    (comment "zip-get examples, all equivalent")
     ;; (? (d/zip-get app-el "v > >"))
     ;; (? (d/zip-get app-el "down right right"))
     ;; (? (d/zip-get app-el ["v" ">" ">"]))
@@ -147,16 +147,16 @@
 
     (comment "With more than one class as keywords")
     #_(do (? "The #gc element class value" (d/class-string gc))
-          (js/setTimeout 
-           (fn []
-             (d/toggle-class! gc :foo :bar)
-             (? "after toggling :foo :bar" (d/class-string gc))
-             (js/setTimeout
-              (fn []
-                (d/toggle-class! gc :foo :bar)
-                (? "after toggling :foo :bar again" (d/class-string gc)))
-              500))
-           500))
+        (js/setTimeout 
+         (fn []
+           (d/toggle-class! gc :foo :bar)
+           (? "after toggling :foo :bar" (d/class-string gc))
+           (js/setTimeout
+            (fn []
+              (d/toggle-class! gc :foo :bar)
+              (? "after toggling :foo :bar again" (d/class-string gc)))
+            500))
+         500))
     
 
     (comment "Add and remove classes")
@@ -179,7 +179,9 @@
 
     (comment "Set property, using bundled applied-science.js-interop/assoc!")
     #_(do (? "The #gc element `value` property value" (j/get gc "value"))
-          (? (j/assoc! gc :value "1")))
+        ;; The value of the circular input element in the third box should change
+        ;; to "1"
+          (j/assoc! gc :value "1"))
 
 
     (comment "JS utilities")
@@ -201,27 +203,26 @@
     #_(do (? "The #app element" app-el)
           (js/setTimeout 
            (fn []
-             (do (d/remove-attribute! app-el :data-foo)
-                 (? "The #app element, after removing data-foo attribute" app-el)
-                 (js/setTimeout
-                  (fn []
-                    (do (d/set-attribute! app-el :data-foo "baz")
-                        (? "The #app element, after setting data-foo attribute" app-el)
-                        ))
-                  500)))
+             (d/remove-attribute! app-el :data-foo)
+             (? "The #app element, after removing data-foo attribute" app-el)
+             (js/setTimeout
+              (fn []
+                (d/set-attribute! app-el :data-foo "baz")
+                (? "The #app element, after setting data-foo attribute" app-el))
+              500))
            500))
     
 
     (comment "Toggle boolean attribute")
-    #_(do (? "The #app element" app-el)
+    #_(do (? "The #app element" el-3)
           (js/setTimeout 
            (fn []
-             (d/toggle-boolean-attribute! app-el :data-foo)
-             (? :log "after toggling data-foo attribute" app-el)
+             (d/toggle-boolean-attribute! el-3 :data-foo)
+             (? :log "after toggling data-foo attribute" el-3)
              (js/setTimeout
               (fn []
-                (d/toggle-boolean-attribute! app-el :data-foo)
-                (? :log "after toggling data-foo attribute" app-el))
+                (d/toggle-boolean-attribute! el-3 :data-foo)
+                (? :log "after toggling data-foo attribute" el-3))
               500))
            500))
     
@@ -274,7 +275,7 @@
     
     (comment "Should be 3000")
     ;; (? (d/duration-property-ms gc "transition-duration"))
-
+    
     (comment "Element geometry")
     ;; (? (d/client-rect el-1))
     ;; (? (d/client-rect-map el-1))
@@ -297,8 +298,7 @@
       )
 
     :component-did-update
-    (fn [this old-argv]
-      )
+    (fn [this old-argv])
 
     :reagent-render 
     (fn []
