@@ -12,7 +12,7 @@
 
            ;; you can make local git clones, or use :git/url deps here
            :local-dev {:override-deps {
-                                      ;;  io.github.paintparty/fireworks {:local/root "../../../../cljc/fireworks"}
+                                       io.github.paintparty/fireworks {:local/root "../../../../cljc/fireworks"}
                                       ;;  io.github.paintparty/lasertag  {:local/root "../../../../cljc/lasertag"}
                                       ;;  design.kushi/domo              {:local/root "../../"}
                                        }

@@ -2,10 +2,20 @@
   (:require [applied-science.js-interop :as j]
             [clojure.string :as string]))
 
-(defn maybe [x pred]
-  (when (if (set? pred)
-          (contains? pred x)
-          (pred x))
+(defn ^:public maybe->
+  "If `(= (pred x) true)`, returns x, otherwise nil.
+   Useful in a `clojure.core/some->` threading form."
+  [x pred]
+  (when (or (true? (pred x))
+            (when (set? pred) (contains? pred x)))
+    x))
+
+(defn ^:public maybe->>
+  "If (= (pred x) true), returns x, otherwise nil.
+   Useful in a `clojure.core/some->>` threading form."
+  [pred x]
+  (when (or (true? (pred x))
+            (when (set? pred) (contains? pred x)))
     x))
 
 
@@ -1131,7 +1141,7 @@
 
    (some-> duration
            as-str
-           (maybe #(or (pos-int? %) (zero? %)))
+           (maybe-> #(or (pos-int? %) (zero? %)))
            (str "ms")
            (->> (set-style! el "transition-duration")))
 
@@ -1158,7 +1168,7 @@
   ([el {:keys [duration           ; <- pos-int
                ]}]
    (let [supplied-fade-duration
-         (maybe duration #(or (pos-int? %) (zero? %)))
+         (maybe-> duration #(or (pos-int? %) (zero? %)))
          
          computed-fade-duration
          (some-> el

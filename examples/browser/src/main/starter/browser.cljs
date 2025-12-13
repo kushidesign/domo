@@ -105,7 +105,10 @@
     ;; (? (d/sibling-with-attribute el-3 :data-foo))
     
     (comment "Multiple siblings selector, single-arity version, Should be a vector of 1 div")
-    ;; (? :log {:format-label-as-code? true} (d/siblings-with-attribute el-3 :data-bar :ok))
+    (? :log (let [a 1
+                  b "asdfasdfasdfasdfasdfasdfasdfasdfa"
+                  c "asdfasdfasdfasdfasdfasdfasdfasdfasd"]
+              (d/siblings-with-attribute el-3 :data-bar :ok)))
     
     (comment "zip-get examples, all equivalent")
     ;; (? (d/zip-get app-el "v > >"))
@@ -146,16 +149,16 @@
 
     (comment "With more than one class as keywords")
     #_(do (? "The #gc element class value" (d/class-string gc))
-        (js/setTimeout 
-         (fn []
-           (d/toggle-class! gc :foo :bar)
-           (? "after toggling :foo :bar" (d/class-string gc))
-           (js/setTimeout
-            (fn []
-              (d/toggle-class! gc :foo :bar)
-              (? "after toggling :foo :bar again" (d/class-string gc)))
-            500))
-         500))
+          (js/setTimeout 
+           (fn []
+             (d/toggle-class! gc :foo :bar)
+             (? "after toggling :foo :bar" (d/class-string gc))
+             (js/setTimeout
+              (fn []
+                (d/toggle-class! gc :foo :bar)
+                (? "after toggling :foo :bar again" (d/class-string gc)))
+              500))
+           500))
     
 
     (comment "Add and remove classes")
@@ -178,8 +181,8 @@
 
     (comment "Set property, using bundled applied-science.js-interop/assoc!")
     #_(do (? "The #gc element `value` property value" (j/get gc "value"))
-        ;; The value of the circular input element in the third box should change
-        ;; to "1"
+          ;; The value of the circular input element in the third box should change
+          ;; to "1"
           (j/assoc! gc :value "1"))
 
 
@@ -338,6 +341,35 @@
 ;; start is called by init and after code reloading finishes
 (defn ^:dev/after-load start []
   (js/console.clear)
+  
+
+
+
+  #_(? [{:a 1} (new js/Map. #js[#js["b" 2]])])
+  ;; (? [(js/Map. #js[#js["a" 1] #js["b" 2]])])
+  
+  #_(? [(into-array [1 2 3])])
+
+  ;; (? (new js/Set #js["foo" "bar"]))
+
+  #_(? {:label-color :red} #_(+ 1 1)
+     [
+        (new js/Set #js["foo" "bar"])
+        #js {:a 1 :b 2}
+        (into-array [1 2 3])
+        (js/Map. #js[#js[3 1] #js[4 2]])
+        (new js/Int8Array #js[1 2 3])
+        ])
+
+  #_(js/console.log (js/Map. #js[#js[3 1] #js[4 2]]))
+
+
+
+
+
+
+
+
   (let [root-el (.getElementById js/document "app")]
     (rdom/render [main-view] root-el)))
 
