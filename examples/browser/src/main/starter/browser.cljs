@@ -1,8 +1,8 @@
-;; domo API Tour ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; domo api tour ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                            ;;
-;;  Uncomment various calls within the domo-examples fn below.                ;;
-;;  Results are printed to the browser dev console.                           ;;
-;;  This should help you get a sense of domo's API.                           ;;
+;;    You can uncomment various calls within the domo-examples function.      ;;
+;;    Results are printed to the browser dev console.                         ;;
+;;    This should help you get a sense of domo's api.                         ;;
 ;;                                                                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -17,10 +17,12 @@
             [reagent.dom :as rdom]
             [fireworks.core :refer [? !?]]))
 
+
 ;; We are overriding some of the default configs for fireworks printing.
-;; You normally would not do this, but we will be priting things out to the 
-;; browser dev console to demonstrate domo's API, and these non-default config
+;; You normally would not do this, but we will be printing things out to the 
+;; browser dev console to demonstrate domo's api, and these non-default config
 ;; values will help readability for this use-case.
+
 (fireworks.core/config!
  {:format-label-as-code? true
   :template              [:file-info :form-or-label :result]
@@ -308,11 +310,11 @@
 
       ;; CAUTION ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       ;;                                                                      ;;
-      ;;  All of the API examples in the domo-examples function, as well as   ;;
-      ;;  the tests in starter.browser.tests assume the existence of the      ;;
-      ;;  HTML structure below, so you probably do not want to change the     ;;
-      ;;  structure, or any of the attributes, unless you have a specific     ;;
-      ;;  reason.                                                             ;;
+      ;;    All of the API examples in the domo-examples function, as well    ;;
+      ;;    as the tests in starter.browser.tests assume the existence of     ;;
+      ;;    the HTML structure below, so you probably do not want to change   ;;
+      ;;    the structure, or any of the attributes, unless you have a        ;;
+      ;;    specific reason.                                                  ;; 
       ;;                                                                      ;;
       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
