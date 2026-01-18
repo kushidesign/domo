@@ -7,7 +7,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (ns starter.browser
-  (:require [starter.browser-tests :as browser-tests :refer [run-tests! S]]
+  (:require [starter.browser-tests :as browser-tests :refer [S]]
+            [starter.qa]
             [clojure.repl]
             [domo.core :as d]
             [clojure.string :as string]
@@ -24,9 +25,11 @@
 ;; values will help readability for this use-case.
 
 (fireworks.core/config!
- {:format-label-as-code? true
-  :template              [:file-info :form-or-label :result]
-  :label-length-limit    100})
+ {
+  ;; :format-label-as-code? true
+  ;; :template              [:file-info :form-or-label :result]
+  ;; :label-length-limit    100
+  })
 
 
 (defn domo-event-examples [e]
@@ -107,7 +110,7 @@
     ;; (? (d/sibling-with-attribute el-3 :data-foo))
     
     (comment "Multiple siblings selector, single-arity version, Should be a vector of 1 div")
-    (? :log (let [a 1
+    #_(? :log (let [a 1
                   b "asdfasdfasdfasdfasdfasdfasdfasdfa"
                   c "asdfasdfasdfasdfasdfasdfasdfasdfasd"]
               (d/siblings-with-attribute el-3 :data-bar :ok)))
@@ -297,12 +300,13 @@
    {:component-did-mount
     (fn [_ _]
 
+      (starter.qa/wtf)
       (domo-examples)
       
       ;; Uncomment below to run tests, if you are deving on the domo lib.
       ;; Note that if you change the contents of the reagent-render function,
       ;; the tests might fail.
-      #_(run-tests!)
+      #_(browser-tests/run-tests!)
       )
 
     :reagent-render 
