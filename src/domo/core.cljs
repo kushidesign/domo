@@ -1,3 +1,5 @@
+;; TODO add (domo/merge-style el m) to merge a style map with existing
+
 (ns domo.core
   (:require [applied-science.js-interop :as j]
             [clojure.string :as string]))

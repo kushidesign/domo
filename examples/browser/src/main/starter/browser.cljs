@@ -28,7 +28,7 @@
  {
   ;; :format-label-as-code? true
   ;; :template              [:file-info :form-or-label :result]
-  ;; :label-length-limit    100
+  ;; :label-max-length    100
   })
 
 
